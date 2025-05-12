@@ -10,7 +10,7 @@ public class AccountGUI {
     private JPanel panel;
     private AccountList accountList;  // 儲存帳目資料的容器
     private Account account;          // 暫存使用者輸入的帳目
-    private JButton enterbutton, displaybutton, deletebutton, statsButton;
+    private JButton enterbutton, displaybutton, deleteByDateButton, deletebutton, statsButton;
     private JTextArea area;           // 顯示訊息的文字區域
     private JTextField datefield, breakfastfield, lunchfield, dinnerfield, othersfield;
     private StreamHelper streamhelper; // 負責檔案讀寫的工具
@@ -76,14 +76,16 @@ public class AccountGUI {
         leftbox.add(otherslabel);
 
         // 建立功能按鈕
-        enterbutton = new JButton("輸入帳目");
+        enterbutton = new JButton("儲存帳目");
         displaybutton = new JButton("列出所有帳目資料");
+        deleteByDateButton = new JButton("刪除指定日期帳目");
         deletebutton = new JButton("清除所有帳目資料");
-        statsButton = new JButton("查看統計");
+        statsButton = new JButton("查看所有帳目統計");
 
         // 將按鈕加入畫面
         centerbox.add(enterbutton);
         rightbox.add(displaybutton);
+        rightbox.add(deleteByDateButton);
         rightbox.add(deletebutton);
         rightbox.add(statsButton);
 
@@ -102,6 +104,7 @@ public class AccountGUI {
         // 註冊按鈕監聽器
         displaybutton.addActionListener(new DisplayListener());
         enterbutton.addActionListener(new EnterListener());
+        deleteByDateButton.addActionListener(new DeleteByDateListener());
         deletebutton.addActionListener(new DeleteListener());
         statsButton.addActionListener(new StatsButtonListener());
 
@@ -208,38 +211,64 @@ public class AccountGUI {
                     area.append(accountList.get(i).printAccount() + "\n");
                 }
             } else {
-                area.setText("目前沒有任何帳目資料");
+                area.setText("⚠️ 目前沒有任何帳目資料");
             }
+        }
+    }
+
+    // 刪除特定帳目監聽器
+    public class DeleteByDateListener implements ActionListener {
+        public void actionPerformed(ActionEvent ev) {
+            String date = JOptionPane.showInputDialog(frame, "請輸入要刪除的日期（格式：YYYY/MM/DD）：");
+
+            if (date == null) return; // 使用者取消輸入
+
+            if (!date.matches("\\d{4}/\\d{2}/\\d{2}")) {
+                JOptionPane.showMessageDialog(frame, "❌ 日期格式錯誤，請輸入：YYYY/MM/DD", "格式錯誤", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            for (int i = 0; i < accountList.size(); i++) {
+                Account acc = accountList.get(i);
+                if (acc.getDate().equals(date)) {
+                    int confirm = JOptionPane.showConfirmDialog(
+                            frame,
+                            "確定要刪除 " + date + " 的帳目資料嗎？",
+                            "確認刪除",
+                            JOptionPane.YES_NO_OPTION
+                    );
+
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        accountList.remove(i);
+                        area.setText("✅ 已刪除 " + date + " 的帳目資料");
+                    } else {
+                        area.setText("❌ 取消刪除操作");
+                    }
+                    return;
+                }
+            }
+
+            JOptionPane.showMessageDialog(frame, "⚠️ 查無 " + date + " 的帳目資料", "資料未找到", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     // 清除所有帳目
     public class DeleteListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
-            accountList.clear();
-            area.setText("所有帳目資料已清除");
-        }
-    }
+            int confirm = JOptionPane.showConfirmDialog(
+                frame,
+                "確定要刪除所有帳目資料嗎？",
+                "確認清除",
+                JOptionPane.YES_NO_OPTION
+            );
 
-    // 檔案選單 - 儲存帳目到新檔案
-    public class SaveMenuListener implements ActionListener {
-        public void actionPerformed(ActionEvent ev) {
-            JFileChooser filechooser = new JFileChooser();
-            if (filechooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
-                streamhelper.saveFile(accountList, filechooser.getSelectedFile());
-                area.setText("帳目檔案已儲存");
+            if (confirm == JOptionPane.YES_OPTION) {
+                accountList.clear();
+                area.setText("✅ 所有帳目資料已清除");
+            } else {
+                area.setText("❌ 取消所有帳目資料刪除操作");
             }
-        }
-    }
-
-    // 檔案選單 - 從檔案讀取帳目
-    public class LoadMenuListener implements ActionListener {
-        public void actionPerformed(ActionEvent ev) {
-            JFileChooser filechooser = new JFileChooser();
-            if (filechooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
-                accountList = streamhelper.loadFile(filechooser.getSelectedFile());
-                area.setText("帳目檔案載入完成");
-            }
+            return;
         }
     }
 
@@ -249,12 +278,22 @@ public class AccountGUI {
             JFrame statsFrame = new JFrame("統計分析");
             statsFrame.setSize(300, 150);
             statsFrame.setLocationRelativeTo(frame);
-            statsFrame.setLayout(new FlowLayout());
+            statsFrame.setLayout(new GridBagLayout()); // 改為 GridBagLayout
 
             JButton yearButton = new JButton("查詢某年");
             JButton monthButton = new JButton("查詢某年某月");
-            statsFrame.add(yearButton);
-            statsFrame.add(monthButton);
+
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridy = 0; // 同一列
+            gbc.insets = new Insets(10, 10, 10, 10); // 四周留白
+
+            // 加入第一個按鈕（在第 0 欄）
+            gbc.gridx = 0;
+            statsFrame.add(yearButton, gbc);
+
+            // 加入第二個按鈕（在第 1 欄）
+            gbc.gridx = 1;
+            statsFrame.add(monthButton, gbc);
 
             // 年統計查詢邏輯
             yearButton.addActionListener(new ActionListener() {
@@ -292,7 +331,7 @@ public class AccountGUI {
             // 月統計查詢邏輯
             monthButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    String month = JOptionPane.showInputDialog(statsFrame, "請輸入月份（格式：YYYY/MM）");
+                    String month = JOptionPane.showInputDialog(statsFrame, "請輸入年份和月份（格式：YYYY/MM）");
 
                     if (month == null) return;
                     if (!month.matches("\\d{4}/\\d{2}")) {
@@ -330,6 +369,28 @@ public class AccountGUI {
             });
 
             statsFrame.setVisible(true);
+        }
+    }
+
+    // 檔案選單 - 儲存帳目到新檔案
+    public class SaveMenuListener implements ActionListener {
+        public void actionPerformed(ActionEvent ev) {
+            JFileChooser filechooser = new JFileChooser();
+            if (filechooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
+                streamhelper.saveFile(accountList, filechooser.getSelectedFile());
+                area.setText("✅ 帳目檔案已儲存");
+            }
+        }
+    }
+
+    // 檔案選單 - 從檔案讀取帳目
+    public class LoadMenuListener implements ActionListener {
+        public void actionPerformed(ActionEvent ev) {
+            JFileChooser filechooser = new JFileChooser();
+            if (filechooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+                accountList = streamhelper.loadFile(filechooser.getSelectedFile());
+                area.setText("✅ 帳目檔案載入完成");
+            }
         }
     }
 

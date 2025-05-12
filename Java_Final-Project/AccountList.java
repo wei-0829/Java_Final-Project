@@ -27,6 +27,11 @@ public class AccountList implements Serializable {
         return list.get(i); // 回傳 ArrayList 中索引為 i 的帳目
     }
 
+    // remove() 方法：移除指定索引位置的帳目
+    public void remove(int index) {
+        list.remove(index);
+    }
+
     // clear() 方法：清空帳目清單中的所有帳目。
     public void clear() {
         list.clear(); // 清空 ArrayList 中的所有帳目
