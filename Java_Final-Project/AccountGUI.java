@@ -3,6 +3,9 @@ package AccountProgram;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.text.SimpleDateFormat;
+// 為了獲取當日日期
+import java.util.Date;
 
 public class AccountGUI {
     // GUI 元件與變數定義
@@ -101,6 +104,15 @@ public class AccountGUI {
         menu.add(saveMenuItem);
         menu.add(loadMenuItem);
         menuBar.add(menu);
+
+        // 加上 Glue，把後面的元件推到最右邊
+        menuBar.add(Box.createHorizontalGlue());
+
+        // 顯示當日日期
+        JLabel dateLabel = new JLabel(getCurrentDate());
+        dateLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        menuBar.add(dateLabel);
+
         frame.setJMenuBar(menuBar);
 
         // 註冊按鈕監聽器
@@ -115,6 +127,32 @@ public class AccountGUI {
         frame.getContentPane().add(panel);
         frame.pack();
         frame.setVisible(true);
+
+        // 顯示每日小語
+        showDailyQuote();
+    }
+
+    // 顯示每日小語
+    private void showDailyQuote() {
+        String[] quotes = {
+            "💡 每一筆花費，都是給未來的自己的一封信。",
+            "💪 小錢不省，大錢難存。",
+            "📘 理財不是有錢人的專利，而是每個人的責任。",
+            "💰 記帳是與自己財務對話的開始。",
+            "🌱 積少成多，從每天的記帳開始。",
+            "🧠 花錢前多想五秒，省錢一整天。",
+            "📊 錢要花得安心，記帳是關鍵。",
+            "💬 財富不是賺來的，是管來的。"
+        };
+
+        int index = (int)(Math.random() * quotes.length);
+        JOptionPane.showMessageDialog(frame, quotes[index], "📢 每日小語", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // 取得當前日期
+    private String getCurrentDate() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+        return sdf.format(new Date());
     }
 
     // 輸入帳目按鈕：檢查欄位並建立帳目物件
@@ -219,6 +257,7 @@ public class AccountGUI {
         }
     }
 
+    // 查詢特定日期的帳目資料
     public class QueryByDateListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             String date = JOptionPane.showInputDialog(frame, "請輸入查詢日期（格式：YYYY/MM/DD）：");
