@@ -10,7 +10,7 @@ public class AccountGUI {
     private JPanel panel;
     private AccountList accountList;  // 儲存帳目資料的容器
     private Account account;          // 暫存使用者輸入的帳目
-    private JButton enterbutton, displaybutton, deleteByDateButton, deletebutton, statsButton;
+    private JButton enterbutton, displaybutton, queryByDateButton, deleteByDateButton, deletebutton, statsButton;
     private JTextArea area;           // 顯示訊息的文字區域
     private JTextField datefield, breakfastfield, lunchfield, dinnerfield, othersfield;
     private StreamHelper streamhelper; // 負責檔案讀寫的工具
@@ -78,6 +78,7 @@ public class AccountGUI {
         // 建立功能按鈕
         enterbutton = new JButton("儲存帳目");
         displaybutton = new JButton("列出所有帳目資料");
+        queryByDateButton = new JButton("查詢指定日期帳目");
         deleteByDateButton = new JButton("刪除指定日期帳目");
         deletebutton = new JButton("清除所有帳目資料");
         statsButton = new JButton("查看所有帳目統計");
@@ -85,6 +86,7 @@ public class AccountGUI {
         // 將按鈕加入畫面
         centerbox.add(enterbutton);
         rightbox.add(displaybutton);
+        rightbox.add(queryByDateButton);
         rightbox.add(deleteByDateButton);
         rightbox.add(deletebutton);
         rightbox.add(statsButton);
@@ -104,6 +106,7 @@ public class AccountGUI {
         // 註冊按鈕監聽器
         displaybutton.addActionListener(new DisplayListener());
         enterbutton.addActionListener(new EnterListener());
+        queryByDateButton.addActionListener(new QueryByDateListener());
         deleteByDateButton.addActionListener(new DeleteByDateListener());
         deletebutton.addActionListener(new DeleteListener());
         statsButton.addActionListener(new StatsButtonListener());
@@ -213,6 +216,28 @@ public class AccountGUI {
             } else {
                 area.setText("⚠️ 目前沒有任何帳目資料");
             }
+        }
+    }
+
+    public class QueryByDateListener implements ActionListener {
+        public void actionPerformed(ActionEvent ev) {
+            String date = JOptionPane.showInputDialog(frame, "請輸入查詢日期（格式：YYYY/MM/DD）：");
+
+            if (date == null) return; // 使用者取消
+            if (!date.matches("\\d{4}/\\d{2}/\\d{2}")) {
+                JOptionPane.showMessageDialog(frame, "❌ 日期格式錯誤，請輸入：YYYY/MM/DD", "格式錯誤", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            for (int i = 0; i < accountList.size(); i++) {
+                Account acc = accountList.get(i);
+                if (acc.getDate().equals(date)) {
+                    area.setText("🔎 查詢結果：\n" + acc.printAccount());
+                    return;
+                }
+            }
+
+            area.setText("⚠️ 查無 " + date + " 的帳目資料");
         }
     }
 
