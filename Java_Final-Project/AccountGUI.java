@@ -1,9 +1,13 @@
 package AccountProgram;
 
 import javax.swing.*;
+
+import AccountProgram.DateUtils;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.text.SimpleDateFormat;
+
 // 為了獲取當日日期
 import java.util.Date;
 
@@ -11,125 +15,147 @@ public class AccountGUI {
     // GUI 元件與變數定義
     private JFrame frame;
     private JPanel panel;
-    private AccountList accountList;  // 儲存帳目資料的容器
-    private Account account;          // 暫存使用者輸入的帳目
+    private AccountList accountList;   // 儲存帳目資料的容器
+    private Account account;           // 暫存使用者輸入的帳目
     private JButton enterbutton, displaybutton, queryByDateButton, deleteByDateButton, deletebutton, statsButton;
-    private JTextArea area;           // 顯示訊息的文字區域
+    private JTextArea area;            // 顯示訊息的文字區域
     private JTextField datefield, breakfastfield, lunchfield, dinnerfield, othersfield;
     private StreamHelper streamhelper; // 負責檔案讀寫的工具
     private JMenu menu;
 
-    // 建立整體 GUI
-    public void buildGUI() {
+    public void buildGUI() { 
         frame = new JFrame("記帳小幫手");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
 
         accountList = new AccountList();
         streamhelper = new StreamHelper();
 
-        panel = new JPanel(new BorderLayout());
-
-        // 建立畫面左右中三個區塊
-        Box leftbox = new Box(BoxLayout.Y_AXIS);
-        Box centerbox = new Box(BoxLayout.Y_AXIS);
-        Box rightbox = new Box(BoxLayout.Y_AXIS);
-        panel.add(BorderLayout.WEST, leftbox);
-        panel.add(BorderLayout.CENTER, centerbox);
-        panel.add(BorderLayout.EAST, rightbox);
+        // 主面板使用 BorderLayout
+        panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // 建立訊息顯示區域
-        area = new JTextArea(10, 10);
-        area.setLineWrap(true);
-        area.setSelectionColor(new Color(173, 216, 230));
-        area.setSelectedTextColor(Color.BLACK);
-        JScrollPane scroller = new JScrollPane(area);
-        scroller.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-        scroller.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        panel.add(BorderLayout.NORTH, scroller);
+        // 中央區域（左側輸入 + 中間欄位 + 右側按鈕）
+        JPanel centerPanel = new JPanel(new GridLayout(1, 3, 10, 10));
 
-        // 建立輸入欄位
-        datefield = new JTextField(10);
-        breakfastfield = new JTextField(5);
-        lunchfield = new JTextField(5);
-        dinnerfield = new JTextField(5);
-        othersfield = new JTextField(5);
-        centerbox.add(datefield);
-        centerbox.add(breakfastfield);
-        centerbox.add(lunchfield);
-        centerbox.add(dinnerfield);
-        centerbox.add(othersfield);
+        // 左側 label
+        JPanel leftPanel = new JPanel(new GridLayout(6, 1, 5, 5));
+        Font font = new Font("Microsoft JhengHei", Font.PLAIN, 14);
+        leftPanel.add(createLabel("日期（格式為YYYY/MM/DD）", font));
+        leftPanel.add(createLabel("早餐支出", font));
+        leftPanel.add(createLabel("午餐支出", font));
+        leftPanel.add(createLabel("晚餐支出", font));
+        leftPanel.add(createLabel("其他支出", font));
 
-        // 建立標籤欄位
-        Font font = new Font("LALA", Font.BOLD, 14);
-        JLabel datelabel = new JLabel("日期（格式為YYYY/MM/DD）");
-        datelabel.setFont(font);
-        JLabel breakfastlabel = new JLabel("早餐支出");
-        breakfastlabel.setFont(font);
-        JLabel lunchlabel = new JLabel("午餐支出");
-        lunchlabel.setFont(font);
-        JLabel dinnerlabel = new JLabel("晚餐支出");
-        dinnerlabel.setFont(font);
-        JLabel otherslabel = new JLabel("其他支出");
-        otherslabel.setFont(font);
-        leftbox.add(datelabel);
-        leftbox.add(breakfastlabel);
-        leftbox.add(lunchlabel);
-        leftbox.add(dinnerlabel);
-        leftbox.add(otherslabel);
-
-        // 建立功能按鈕
+        // 中間輸入欄位
+        JPanel inputPanel = new JPanel(new GridLayout(6, 1, 5, 5));
+        datefield = new JTextField();
+        breakfastfield = new JTextField();
+        lunchfield = new JTextField();
+        dinnerfield = new JTextField();
+        othersfield = new JTextField();
+        inputPanel.add(datefield);
+        inputPanel.add(breakfastfield);
+        inputPanel.add(lunchfield);
+        inputPanel.add(dinnerfield);
+        inputPanel.add(othersfield);
         enterbutton = new JButton("儲存帳目");
+        inputPanel.add(enterbutton);
+
+        // 右側功能按鈕
+        JPanel rightPanel = new JPanel(new GridLayout(5, 1, 5, 5));
         displaybutton = new JButton("列出所有帳目資料");
         queryByDateButton = new JButton("查詢指定日期帳目");
         deleteByDateButton = new JButton("刪除指定日期帳目");
         deletebutton = new JButton("清除所有帳目資料");
         statsButton = new JButton("查看所有帳目統計");
+        rightPanel.add(displaybutton);
+        rightPanel.add(queryByDateButton);
+        rightPanel.add(deleteByDateButton);
+        rightPanel.add(deletebutton);
+        rightPanel.add(statsButton);
 
-        // 將按鈕加入畫面
-        centerbox.add(enterbutton);
-        rightbox.add(displaybutton);
-        rightbox.add(queryByDateButton);
-        rightbox.add(deleteByDateButton);
-        rightbox.add(deletebutton);
-        rightbox.add(statsButton);
+        // 加入到中央 panel
+        centerPanel.add(leftPanel);
+        centerPanel.add(inputPanel);
+        centerPanel.add(rightPanel);
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // 中間區域四周留白
 
-        // 設定選單列
-        menu = new JMenu("檔案管理");
-        JMenuBar menuBar = new JMenuBar();
-        JMenuItem saveMenuItem = new JMenuItem("另存帳目新檔");
-        JMenuItem loadMenuItem = new JMenuItem("讀取帳目檔案");
-        saveMenuItem.addActionListener(new SaveMenuListener());
-        loadMenuItem.addActionListener(new LoadMenuListener());
-        menu.add(saveMenuItem);
-        menu.add(loadMenuItem);
-        menuBar.add(menu);
+        // 上方區域為文字區域
+        area = new JTextArea(15, 30);
+        area.setFont(new Font("Monospaced", Font.PLAIN, 14)); // 設定字型和字體大小
+        area.setForeground(Color.BLACK);  // 設定文字顏色為純黑
+        area.setLineWrap(true);
+        JScrollPane scroller = new JScrollPane(area,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-        // 加上 Glue，把後面的元件推到最右邊
-        menuBar.add(Box.createHorizontalGlue());
+        // 這行顯示歡迎訊息
+        area.setText("👋 歡迎使用《記帳小幫手》！\n請輸入今日的支出資料，並點擊『儲存帳目』開始記錄！");
 
-        // 顯示當日日期
-        JLabel dateLabel = new JLabel(getCurrentDate());
-        dateLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        menuBar.add(dateLabel);
+        // 使用 JSplitPane 來分割上面和下面的區域
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scroller, centerPanel);
+        splitPane.setResizeWeight(0.5); // 讓兩個區域的大小比例為 1:1
+        splitPane.setDividerLocation(0.5);  // 設定分割線的初始位置在中間
+        splitPane.setDividerSize(6); // 設定為不可調整大小
+        panel.add(splitPane, BorderLayout.CENTER);
 
-        frame.setJMenuBar(menuBar);
+        // ===== 選單列 =====
+        frame.setJMenuBar(createMenuBar());
 
-        // 註冊按鈕監聽器
-        displaybutton.addActionListener(new DisplayListener());
+        // ===== 註冊按鈕監聽器 =====
         enterbutton.addActionListener(new EnterListener());
+        displaybutton.addActionListener(new DisplayListener());
         queryByDateButton.addActionListener(new QueryByDateListener());
         deleteByDateButton.addActionListener(new DeleteByDateListener());
         deletebutton.addActionListener(new DeleteListener());
         statsButton.addActionListener(new StatsButtonListener());
 
-        frame.setSize(400, 400);
+        // 加入主 panel
         frame.getContentPane().add(panel);
-        frame.pack();
+        frame.setSize(800, 600);  // 設定精確的初始大小
+        frame.setMinimumSize(new Dimension(800, 600));  // 設定最小尺寸
+        frame.setLocationRelativeTo(null); // 這行讓視窗顯示在螢幕中央
         frame.setVisible(true);
 
         // 顯示每日小語
         showDailyQuote();
+    }
+
+    private JMenuBar createMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+
+        Font menuFont = new Font("Microsoft JhengHei", Font.PLAIN, 16);
+
+        menu = new JMenu("檔案管理");
+        menu.setFont(menuFont);
+
+        JMenuItem saveMenuItem = new JMenuItem("另存帳目新檔");
+        JMenuItem loadMenuItem = new JMenuItem("讀取帳目檔案");
+        saveMenuItem.setFont(menuFont);
+        loadMenuItem.setFont(menuFont);
+
+        saveMenuItem.addActionListener(new SaveMenuListener());
+        loadMenuItem.addActionListener(new LoadMenuListener());
+
+        menu.add(saveMenuItem);
+        menu.add(loadMenuItem);
+        menuBar.add(menu);
+        menuBar.add(Box.createHorizontalGlue());
+
+        JLabel dateLabel = new JLabel(getCurrentDate());
+        dateLabel.setFont(menuFont);
+        dateLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 5)); // 讓日期離右邊界5px
+        menuBar.add(dateLabel);
+
+        return menuBar;
+    }
+
+    // 建立標籤的輔助方法
+    private JLabel createLabel(String text, Font font) {
+        JLabel label = new JLabel(text);
+        label.setFont(font);
+        return label;
     }
 
     // 顯示每日小語
@@ -161,23 +187,30 @@ public class AccountGUI {
             StringBuilder errorMsg = new StringBuilder();
             String date = datefield.getText().trim();
 
-            if (!isValidDate(date)) {
-                errorMsg.append("❌ 日期格式錯誤（請輸入：YYYY/MM/DD）\n");
+            if (!DateUtils.isValidDate(date)) {
+                errorMsg.append("❌ 日期格式為空或為無效日期（請輸入：YYYY/MM/DD）\n");
+            } else if (DateUtils.isFutureDate(date)) {
+                errorMsg.append("❌ 不可以輸入未來的日期\n");
             }
 
-            int breakfast = 0, lunch = 0, dinner = 0, others = 0;
+            String[] labels = { "早餐", "午餐", "晚餐", "其他" };
+            JTextField[] fields = { breakfastfield, lunchfield, dinnerfield, othersfield };
+            int[] values = new int[4];
 
-            try {
-                breakfast = Integer.parseInt(breakfastfield.getText().trim());
-                lunch = Integer.parseInt(lunchfield.getText().trim());
-                dinner = Integer.parseInt(dinnerfield.getText().trim());
-                others = Integer.parseInt(othersfield.getText().trim());
-
-                if (breakfast < 0 || lunch < 0 || dinner < 0 || others < 0) {
-                    errorMsg.append("❌ 金額不能為負數\n");
+            for (int i = 0; i < 4; i++) {
+                String text = fields[i].getText().trim();
+                if (text.isEmpty()) {
+                    errorMsg.append("❌ " + labels[i] + "金額不能為空\n");
+                    continue;
                 }
-            } catch (NumberFormatException e) {
-                errorMsg.append("❌ 金額欄位格式錯誤（請輸入有效整數）\n");
+                try {
+                    values[i] = Integer.parseInt(text);
+                    if (values[i] < 0) {
+                        errorMsg.append("❌ " + labels[i] + "金額不能為負數\n");
+                    }
+                } catch (NumberFormatException e) {
+                    errorMsg.append("❌ " + labels[i] + "金額格式錯誤（請輸入有效整數）\n");
+                }
             }
 
             if (errorMsg.length() > 0) {
@@ -185,10 +218,17 @@ public class AccountGUI {
                 return;
             }
 
+            // 如果通過驗證，設定變數
+            int breakfast = values[0];
+            int lunch = values[1];
+            int dinner = values[2];
+            int others = values[3];
+
             // 檢查是否已有相同日期的帳目
             boolean accountExists = false;
             for (int i = 0; i < accountList.size(); i++) {
                 Account existingAccount = accountList.get(i);
+
                 if (existingAccount.getDate().equals(date)) {
                     // 如果已經有相同日期的帳目，更新該帳目
                     existingAccount.setBreakfast(breakfast);
@@ -216,31 +256,6 @@ public class AccountGUI {
             dinnerfield.setText("");
             othersfield.setText("");
         }
-
-        // 日期格式與範圍驗證
-        private boolean isValidDate(String dateStr) {
-            if (!dateStr.matches("\\d{4}/\\d{2}/\\d{2}")) return false;
-
-            try {
-                String[] parts = dateStr.split("/");
-                int year = Integer.parseInt(parts[0]);
-                int month = Integer.parseInt(parts[1]);
-                int day = Integer.parseInt(parts[2]);
-
-                if (month < 1 || month > 12) return false;
-
-                int[] daysInMonth = { 31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30,
-                                    31, 31, 30, 31, 30, 31 };
-
-                return day >= 1 && day <= daysInMonth[month - 1];
-            } catch (Exception e) {
-                return false;
-            }
-        }
-
-        private boolean isLeapYear(int year) {
-            return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-        }
     }
 
     // 顯示所有帳目資料
@@ -263,16 +278,21 @@ public class AccountGUI {
             String date = JOptionPane.showInputDialog(frame, "請輸入查詢日期（格式：YYYY/MM/DD）：");
 
             if (date == null) return; // 使用者取消
-            if (!date.matches("\\d{4}/\\d{2}/\\d{2}")) {
-                JOptionPane.showMessageDialog(frame, "❌ 日期格式錯誤，請輸入：YYYY/MM/DD", "格式錯誤", JOptionPane.ERROR_MESSAGE);
+
+            if (!DateUtils.isValidDate(date)) {
+                JOptionPane.showMessageDialog(frame, "❌ 日期為空或為無效日期，請輸入：YYYY/MM/DD", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
+                return;
+            } else if (DateUtils.isFutureDate(date)) {
+                JOptionPane.showMessageDialog(frame, "❌ 不可以輸入未來的日期\n", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             for (int i = 0; i < accountList.size(); i++) {
                 Account acc = accountList.get(i);
+
                 if (acc.getDate().equals(date)) {
                     area.setText("🔎 查詢結果：\n" + acc.printAccount());
-                    return;
+                    return; // 茶道並顯示後，結束迴圈
                 }
             }
 
@@ -285,15 +305,19 @@ public class AccountGUI {
         public void actionPerformed(ActionEvent ev) {
             String date = JOptionPane.showInputDialog(frame, "請輸入要刪除的日期（格式：YYYY/MM/DD）：");
 
-            if (date == null) return; // 使用者取消輸入
-
-            if (!date.matches("\\d{4}/\\d{2}/\\d{2}")) {
-                JOptionPane.showMessageDialog(frame, "❌ 日期格式錯誤，請輸入：YYYY/MM/DD", "格式錯誤", JOptionPane.ERROR_MESSAGE);
+            if (date == null) return; // 使用者取消
+            
+            if (!DateUtils.isValidDate(date)) {
+                JOptionPane.showMessageDialog(frame, "❌ 日期為空或為無效日期，請輸入：YYYY/MM/DD", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
+                return;
+            } else if (DateUtils.isFutureDate(date)) {
+                JOptionPane.showMessageDialog(frame, "❌ 不可以輸入未來的日期\n", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             for (int i = 0; i < accountList.size(); i++) {
                 Account acc = accountList.get(i);
+
                 if (acc.getDate().equals(date)) {
                     int confirm = JOptionPane.showConfirmDialog(
                             frame,
@@ -308,11 +332,11 @@ public class AccountGUI {
                     } else {
                         area.setText("❌ 取消刪除操作");
                     }
-                    return;
+                    return; // 找到並刪除後，結束迴圈
                 }
             }
 
-            JOptionPane.showMessageDialog(frame, "⚠️ 查無 " + date + " 的帳目資料", "資料未找到", JOptionPane.INFORMATION_MESSAGE);
+            area.setText("⚠️ 無法刪除，查無 " + date + " 的帳目資料");
         }
     }
 
@@ -332,7 +356,6 @@ public class AccountGUI {
             } else {
                 area.setText("❌ 取消所有帳目資料刪除操作");
             }
-            return;
         }
     }
 
@@ -365,12 +388,14 @@ public class AccountGUI {
                     String year = JOptionPane.showInputDialog(statsFrame, "請輸入年份（例如：2025）");
 
                     if (year == null) return; // 按下取消或關閉
-                    if (!year.matches("\\d{4}")) {
-                        JOptionPane.showMessageDialog(statsFrame, "❌ 輸入格式錯誤，請輸入 4 位數的年份，例如：2025", "格式錯誤", JOptionPane.ERROR_MESSAGE);
+
+                    if (!DateUtils.isValidYear(year)) {
+                        JOptionPane.showMessageDialog(statsFrame, "❌ 輸入為空或不是有效年份，請輸入 4 位數的有效年份，例如：2025", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
                     int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0;
+
                     for (int i = 0; i < accountList.size(); i++) {
                         Account acc = accountList.get(i);
                         if (acc.getDate().startsWith(year)) {
@@ -398,19 +423,17 @@ public class AccountGUI {
                     String month = JOptionPane.showInputDialog(statsFrame, "請輸入年份和月份（格式：YYYY/MM）");
 
                     if (month == null) return;
-                    if (!month.matches("\\d{4}/\\d{2}")) {
-                        JOptionPane.showMessageDialog(statsFrame, "❌ 輸入格式錯誤，請輸入正確的年月格式，例如：2025/05", "格式錯誤", JOptionPane.ERROR_MESSAGE);
+
+                    if (!DateUtils.isValidYearMonth(month)) {
+                        JOptionPane.showMessageDialog(statsFrame, "❌ 輸入為空或不是有效年月份，請輸入有效的年月份，例如：2025/05", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
                     String[] parts = month.split("/");
                     int m = Integer.parseInt(parts[1]);
-                    if (m < 1 || m > 12) {
-                        JOptionPane.showMessageDialog(statsFrame, "❌ 月份錯誤，請輸入介於 01 到 12 的月份", "格式錯誤", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
 
                     int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0;
+
                     for (int i = 0; i < accountList.size(); i++) {
                         Account acc = accountList.get(i);
                         if (acc.getDate().startsWith(month)) {
@@ -440,6 +463,7 @@ public class AccountGUI {
     public class SaveMenuListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             JFileChooser filechooser = new JFileChooser();
+
             if (filechooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
                 streamhelper.saveFile(accountList, filechooser.getSelectedFile());
                 area.setText("✅ 帳目檔案已儲存");
@@ -451,6 +475,7 @@ public class AccountGUI {
     public class LoadMenuListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             JFileChooser filechooser = new JFileChooser();
+
             if (filechooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
                 accountList = streamhelper.loadFile(filechooser.getSelectedFile());
                 area.setText("✅ 帳目檔案載入完成");
