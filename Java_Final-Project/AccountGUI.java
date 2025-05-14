@@ -17,9 +17,9 @@ public class AccountGUI {
     private JPanel panel;
     private AccountList accountList;   // 儲存帳目資料的容器
     private Account account;           // 暫存使用者輸入的帳目
-    private JButton enterbutton, displaybutton, queryByDateButton, deleteByDateButton, deletebutton, statsButton;
+    private JButton enterbutton, displaybutton, queryByDateButton, deleteByDateButton, deletebutton, searchByNoteButton, statsButton;
     private JTextArea area;            // 顯示訊息的文字區域
-    private JTextField datefield, breakfastfield, lunchfield, dinnerfield, othersfield;
+    private JTextField datefield, breakfastfield, lunchfield, dinnerfield, othersfield, notefield;
     private StreamHelper streamhelper; // 負責檔案讀寫的工具
     private JMenu menu;
 
@@ -39,40 +39,46 @@ public class AccountGUI {
         JPanel centerPanel = new JPanel(new GridLayout(1, 3, 10, 10));
 
         // 左側 label
-        JPanel leftPanel = new JPanel(new GridLayout(6, 1, 5, 5));
+        JPanel leftPanel = new JPanel(new GridLayout(7, 1, 5, 5));
         Font font = new Font("Microsoft JhengHei", Font.PLAIN, 14);
-        leftPanel.add(createLabel("日期（格式為YYYY/MM/DD）", font));
-        leftPanel.add(createLabel("早餐支出", font));
-        leftPanel.add(createLabel("午餐支出", font));
-        leftPanel.add(createLabel("晚餐支出", font));
-        leftPanel.add(createLabel("其他支出", font));
+        leftPanel.add(createLabel("日期（格式為YYYY/MM/DD）：", font));
+        leftPanel.add(createLabel("早餐支出：", font));
+        leftPanel.add(createLabel("午餐支出：", font));
+        leftPanel.add(createLabel("晚餐支出：", font));
+        leftPanel.add(createLabel("其他支出：", font));
+        leftPanel.add(createLabel("帳目備註（若空白則視為無）：", font));
+        leftPanel.add(createLabel("若要修改帳目，重新輸入後儲存即可", font));
 
         // 中間輸入欄位
-        JPanel inputPanel = new JPanel(new GridLayout(6, 1, 5, 5));
+        JPanel inputPanel = new JPanel(new GridLayout(7, 1, 5, 5));
         datefield = new JTextField();
         breakfastfield = new JTextField();
         lunchfield = new JTextField();
         dinnerfield = new JTextField();
         othersfield = new JTextField();
+        notefield = new JTextField();
         inputPanel.add(datefield);
         inputPanel.add(breakfastfield);
         inputPanel.add(lunchfield);
         inputPanel.add(dinnerfield);
         inputPanel.add(othersfield);
+        inputPanel.add(notefield);
         enterbutton = new JButton("儲存帳目");
         inputPanel.add(enterbutton);
 
         // 右側功能按鈕
-        JPanel rightPanel = new JPanel(new GridLayout(5, 1, 5, 5));
+        JPanel rightPanel = new JPanel(new GridLayout(6, 1, 5, 5));
         displaybutton = new JButton("列出所有帳目資料");
         queryByDateButton = new JButton("查詢指定日期帳目");
         deleteByDateButton = new JButton("刪除指定日期帳目");
         deletebutton = new JButton("清除所有帳目資料");
+        searchByNoteButton = new JButton("查詢備註的關鍵字");
         statsButton = new JButton("查看所有帳目統計");
         rightPanel.add(displaybutton);
         rightPanel.add(queryByDateButton);
         rightPanel.add(deleteByDateButton);
         rightPanel.add(deletebutton);
+        rightPanel.add(searchByNoteButton);
         rightPanel.add(statsButton);
 
         // 加入到中央 panel
@@ -82,22 +88,26 @@ public class AccountGUI {
         centerPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // 中間區域四周留白
 
         // 上方區域為文字區域
-        area = new JTextArea(15, 30);
-        area.setFont(new Font("Monospaced", Font.PLAIN, 14)); // 設定字型和字體大小
-        area.setForeground(Color.BLACK);  // 設定文字顏色為純黑
+        area = new JTextArea();
+        area.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        area.setForeground(Color.BLACK);
         area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setBorder(null);
+
         JScrollPane scroller = new JScrollPane(area,
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroller.setBorder(null);
 
         // 這行顯示歡迎訊息
         area.setText("👋 歡迎使用《記帳小幫手》！\n請輸入今日的支出資料，並點擊『儲存帳目』開始記錄！");
 
         // 使用 JSplitPane 來分割上面和下面的區域
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scroller, centerPanel);
-        splitPane.setResizeWeight(0.5); // 讓兩個區域的大小比例為 1:1
-        splitPane.setDividerLocation(0.5);  // 設定分割線的初始位置在中間
-        splitPane.setDividerSize(6); // 設定為不可調整大小
+        splitPane.setResizeWeight(0.5); // 調整時讓兩個區域的大小比例為 1:1
+        splitPane.setDividerLocation(250); // 直接設定分隔線為一半高度
+        splitPane.setDividerSize(5); // 分隔線寬度
         panel.add(splitPane, BorderLayout.CENTER);
 
         // ===== 選單列 =====
@@ -109,6 +119,7 @@ public class AccountGUI {
         queryByDateButton.addActionListener(new QueryByDateListener());
         deleteByDateButton.addActionListener(new DeleteByDateListener());
         deletebutton.addActionListener(new DeleteListener());
+        searchByNoteButton.addActionListener(new SearchByNoteListener());
         statsButton.addActionListener(new StatsButtonListener());
 
         // 加入主 panel
@@ -213,6 +224,12 @@ public class AccountGUI {
                 }
             }
 
+            // 取得備註
+            String note = notefield.getText().trim();
+            if (note.isEmpty()) {
+                note = "無";
+            }
+
             if (errorMsg.length() > 0) {
                 area.setText(errorMsg.toString());
                 return;
@@ -235,6 +252,7 @@ public class AccountGUI {
                     existingAccount.setLunch(lunch);
                     existingAccount.setDinner(dinner);
                     existingAccount.setOthers(others);
+                    existingAccount.setNote(note);
                     area.setText("✅ 帳目已更新！ 日期：" + date);
                     accountExists = true;
                     break;
@@ -243,7 +261,7 @@ public class AccountGUI {
 
             // 如果沒有相同日期的帳目，則新增一筆帳目
             if (!accountExists) {
-                account = new Account(breakfast, lunch, dinner, others, date);
+                account = new Account(breakfast, lunch, dinner, others, date, note);
                 accountList.add(account);
                 account = null;
                 area.setText("✅ 帳目建立成功！");
@@ -255,6 +273,7 @@ public class AccountGUI {
             lunchfield.setText("");
             dinnerfield.setText("");
             othersfield.setText("");
+            notefield.setText("");
         }
     }
 
@@ -262,9 +281,9 @@ public class AccountGUI {
     public class DisplayListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             if (accountList.size() > 0) {
-                area.setText("");
+                area.setText("所有帳目資料：\n\n");
                 for (int i = 0; i < accountList.size(); i++) {
-                    area.append(accountList.get(i).printAccount() + "\n");
+                    area.append(accountList.get(i).printAccount() + "\n\n");
                 }
             } else {
                 area.setText("⚠️ 目前沒有任何帳目資料");
@@ -275,7 +294,7 @@ public class AccountGUI {
     // 查詢特定日期的帳目資料
     public class QueryByDateListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
-            String date = JOptionPane.showInputDialog(frame, "請輸入查詢日期（格式：YYYY/MM/DD）：");
+            String date = JOptionPane.showInputDialog(frame, "請輸入查詢日期（格式：YYYY/MM/DD）：", "查詢視窗", JOptionPane.QUESTION_MESSAGE);
 
             if (date == null) return; // 使用者取消
 
@@ -291,7 +310,7 @@ public class AccountGUI {
                 Account acc = accountList.get(i);
 
                 if (acc.getDate().equals(date)) {
-                    area.setText("🔎 查詢結果：\n" + acc.printAccount());
+                    area.setText("🔎 查詢結果：\n\n" + acc.printAccount());
                     return; // 茶道並顯示後，結束迴圈
                 }
             }
@@ -300,10 +319,10 @@ public class AccountGUI {
         }
     }
 
-    // 刪除特定帳目監聽器
+    // 刪除特定日期的帳目資料
     public class DeleteByDateListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
-            String date = JOptionPane.showInputDialog(frame, "請輸入要刪除的日期（格式：YYYY/MM/DD）：");
+            String date = JOptionPane.showInputDialog(frame, "請輸入要刪除的日期（格式：YYYY/MM/DD）：", "刪除視窗", JOptionPane.QUESTION_MESSAGE);
 
             if (date == null) return; // 使用者取消
             
@@ -340,7 +359,7 @@ public class AccountGUI {
         }
     }
 
-    // 清除所有帳目
+    // 清除所有帳目資料
     public class DeleteListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             int confirm = JOptionPane.showConfirmDialog(
@@ -355,6 +374,39 @@ public class AccountGUI {
                 area.setText("✅ 所有帳目資料已清除");
             } else {
                 area.setText("❌ 取消所有帳目資料刪除操作");
+            }
+        }
+    }
+
+    // 尋找備註中是否有關鍵字
+    public class SearchByNoteListener implements ActionListener {
+        public void actionPerformed(ActionEvent ev) {
+            String keyword = JOptionPane.showInputDialog(frame, "請輸入備註關鍵字：", "查詢備註", JOptionPane.QUESTION_MESSAGE);
+
+            if (keyword == null) return; // 使用者取消
+
+            if (keyword.trim().isEmpty()) {
+                area.setText("⚠️ 請輸入有效的關鍵字！");
+                return;
+            }
+
+            keyword = keyword.trim();
+            StringBuilder result = new StringBuilder();
+            boolean found = false;
+
+            for (int i = 0; i < accountList.size(); i++) {
+                Account acc = accountList.get(i);
+
+                if (acc.getNote() != null && acc.getNote().contains(keyword)) {
+                    result.append(acc.printAccount()).append("\n\n");
+                    found = true;
+                }
+            }
+
+            if (found) {
+                area.setText("🔍 查詢結果如下（包含關鍵字：「" + keyword + "」）：\n\n" + result);
+            } else {
+                area.setText("❌ 沒有找到備註中包含關鍵字「" + keyword + "」的帳目。");
             }
         }
     }
@@ -384,7 +436,7 @@ public class AccountGUI {
 
             // 年統計查詢邏輯
             yearButton.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent e) {
+                public void actionPerformed(ActionEvent ev) {
                     String year = JOptionPane.showInputDialog(statsFrame, "請輸入年份（例如：2025）");
 
                     if (year == null) return; // 按下取消或關閉
@@ -419,7 +471,7 @@ public class AccountGUI {
 
             // 月統計查詢邏輯
             monthButton.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent e) {
+                public void actionPerformed(ActionEvent ev) {
                     String month = JOptionPane.showInputDialog(statsFrame, "請輸入年份和月份（格式：YYYY/MM）");
 
                     if (month == null) return;

@@ -12,6 +12,7 @@ public class Account implements Serializable {
     private int dinner;     // 晚餐支出金額
     private int others;     // 其他支出金額
     private String date;    // 記帳日期（格式範例："2025/05/12"）
+    private String note;    // 備註內容
 
     /**
      * 建構子：建立一筆帳目資料
@@ -20,13 +21,15 @@ public class Account implements Serializable {
      * @param dinner 晚餐支出
      * @param others 其他支出
      * @param date 記帳日期
+     * @param note 備註內容
      */
-    public Account(int breakfast, int lunch, int dinner, int others, String date) {
+    public Account(int breakfast, int lunch, int dinner, int others, String date, String note) {
         this.breakfast = breakfast;
         this.lunch = lunch;
         this.dinner = dinner;
         this.others = others;
         this.date = date;
+        this.note = note;
     }
 
     /**
@@ -35,8 +38,8 @@ public class Account implements Serializable {
      */
     public String printAccount() {
         int total = breakfast + lunch + dinner + others;
-        return String.format("日期：%s | 早餐：%d 元 | 午餐：%d 元 | 晚餐：%d 元 | 其他：%d 元 | 總計：%d 元",
-                             date, breakfast, lunch, dinner, others, total);
+        return String.format("日期：%s | 早餐：%d 元 | 午餐：%d 元 | 晚餐：%d 元 | 其他：%d 元 | 總計：%d 元 | 備註：%s",
+                             date, breakfast, lunch, dinner, others, total, note);
     }
 
     // 以下為 getter 方法，提供取得各項資料的方式（支出金額與日期）
@@ -55,6 +58,10 @@ public class Account implements Serializable {
 
     public int getOthers() {
         return others;
+    }
+
+    public String getNote() {
+        return note;
     }
 
     /**
@@ -81,6 +88,10 @@ public class Account implements Serializable {
 
     public void setOthers(int others) {
         this.others = others;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
     
     /**
