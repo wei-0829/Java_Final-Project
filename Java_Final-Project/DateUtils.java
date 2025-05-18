@@ -1,89 +1,81 @@
 package AccountProgram;
 
-import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
 public class DateUtils {
-
-    // 檢查日期格式與範圍
-    public static boolean isValidDate(String dateStr) {
-        if (!dateStr.matches("\\d{4}/\\d{2}/\\d{2}")) return false;
-
+    public static boolean isValidDate(String date) {
+        if (date == null || !date.matches("\\d{4}/\\d{2}/\\d{2}")) {
+            return false;
+        }
         try {
-            String[] parts = dateStr.split("/");
-            int year = Integer.parseInt(parts[0]);
-            int month = Integer.parseInt(parts[1]);
-            int day = Integer.parseInt(parts[2]);
-
-            if (year < 1900 || month < 1 || month > 12) return false;
-
-            int[] daysInMonth = { 31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30,
-                                  31, 31, 30, 31, 30, 31 };
-
-            return day >= 1 && day <= daysInMonth[month - 1];
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+            sdf.setLenient(false);
+            sdf.parse(date);
+            return true;
         } catch (Exception e) {
             return false;
         }
     }
 
-    // 檢查閏年
-    private static boolean isLeapYear(int year) {
-        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-    }
-
-    // 檢查日期為未來的日期
-    public static boolean isFutureDate(String dateStr) {
-        String[] parts = dateStr.split("/");
-        int inputYear = Integer.parseInt(parts[0]);
-        int inputMonth = Integer.parseInt(parts[1]);
-        int inputDay = Integer.parseInt(parts[2]);
-
-        // 取得今天的年月日
-        Calendar today = Calendar.getInstance();
-        int currentYear = today.get(Calendar.YEAR);
-        int currentMonth = today.get(Calendar.MONTH) + 1; // 月份從0開始
-        int currentDay = today.get(Calendar.DAY_OF_MONTH);
-
-        if (inputYear > currentYear) {
-            return true;
-        } else if (inputYear == currentYear && inputMonth > currentMonth){
-            return true;
-        } else if (inputYear == currentYear && inputMonth == currentMonth && inputDay > currentDay) {
-            return true;
-        } else {
+    public static boolean isFutureDate(String date) {
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+            Date inputDate = sdf.parse(date);
+            Date currentDate = new Date();
+            return inputDate.after(currentDate);
+        } catch (Exception e) {
             return false;
         }
     }
 
-    // 檢查年份的格式與範圍
-    public static boolean isValidYear(String yearStr) {
-        if (!yearStr.matches("\\d{4}")) return false;
-
+    public static boolean isValidYear(String year) {
+        if (year == null || !year.matches("\\d{4}")) {
+            return false;
+        }
         try {
-            int year = Integer.parseInt(yearStr);
-            int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-            return year >= 1900 && year <= currentYear; // 合理範圍
+            int y = Integer.parseInt(year);
+            return y >= 1900 && y <= 9999;
         } catch (NumberFormatException e) {
             return false;
         }
     }
 
-    // 檢查年份、月份的格式與範圍
-    public static boolean isValidYearMonth(String yearMonthStr) {
-        if (!yearMonthStr.matches("\\d{4}/\\d{2}")) return false;
-
+    public static boolean isValidYearMonth(String yearMonth) {
+        if (yearMonth == null || !yearMonth.matches("\\d{4}/\\d{2}")) {
+            return false;
+        }
         try {
-            String[] parts = yearMonthStr.split("/");
+            String[] parts = yearMonth.split("/");
             int year = Integer.parseInt(parts[0]);
             int month = Integer.parseInt(parts[1]);
-
-            int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-            int currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1; // 月份從0開始
-            return (year >= 1900) && (month >= 1 && month <= 12) && (year < currentYear || (year == currentYear && month <= currentMonth));
-        } catch (Exception e) {
+            return year >= 1900 && year <= 9999 && month >= 1 && month <= 12;
+        } catch (NumberFormatException e) {
             return false;
         }
     }
 
+    public static String getCurrentDate() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+        return sdf.format(new Date());
+    }
+
+    public static String parseNumericDate(String input) {
+        if (input == null || !input.matches("\\d{8}")) {
+            return null;
+        }
+        try {
+            String year = input.substring(0, 4);
+            String month = input.substring(4, 6);
+            String day = input.substring(6, 8);
+            String formatted = year + "/" + month + "/" + day;
+            if (!isValidDate(formatted)) {
+                return null;
+            }
+            return formatted;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
