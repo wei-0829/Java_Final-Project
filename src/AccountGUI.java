@@ -21,6 +21,10 @@ import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
 
+//資料匯出相關的 import
+import java.io.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
 public class AccountGUI {
     // GUI 元件與變數定義
     private JFrame frame;
@@ -676,6 +680,7 @@ public class AccountGUI {
         public void actionPerformed(ActionEvent ev) {
             JFileChooser filechooser = new JFileChooser();
 
+            //用filter建立可儲存的檔案類型選項，以及用此選項辨別如何處理資料
             FileNameExtensionFilter csvFilter = new FileNameExtensionFilter("CSV 檔案 (*.csv)", "csv");
             filechooser.setFileFilter(csvFilter);
             filechooser.setAcceptAllFileFilterUsed(true);

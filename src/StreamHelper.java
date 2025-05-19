@@ -18,7 +18,24 @@ public class StreamHelper {
 
     // saveFile() csv版本
     public void saveFileCsv(AccountList list, File file){
+        try{
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
+            
+            // 寫入 UTF-8 BOM
+            bw.write('\uFEFF');
 
+            bw.write("早餐,午餐,晚餐,其他,日期,備註");
+            bw.newLine();
+            
+            for(Account acc : list.getAll()){
+                String line = String.format("%d,%d,%d,%d,%s,%s", acc.getBreakfast(), acc.getLunch(), acc.getDinner(), acc.getOthers(), acc.getDate(), acc.getNote());
+                bw.write(line);
+                bw.newLine();
+            }
+            bw.flush(); // 把緩衝區的資料全部寫進檔案
+        } catch (IOException ex) {
+            ex.printStackTrace(); // 捕捉 I/O 異常並印出錯誤訊息
+        }
     }
 
     // loadFile() 方法：從檔案載入帳目清單（反序列化）
