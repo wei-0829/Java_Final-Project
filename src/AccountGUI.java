@@ -2,13 +2,13 @@ import javax.swing.*;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-
-// 為了獲取當日日期
 import java.util.Date;
 
 // JFreeChart 相關的 import
@@ -18,8 +18,15 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.labels.StandardCategoryToolTipGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.general.DefaultPieDataset;
+
+// JDateChooser 相關的 import
+import com.toedter.calendar.JDateChooser;
+import com.toedter.calendar.JYearChooser;
+import com.toedter.calendar.JMonthChooser;
 
 //資料匯出相關的 import
 import java.io.*;
@@ -27,15 +34,16 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class AccountGUI {
     // GUI 元件與變數定義
-    private JFrame frame;
-    private JPanel panel;
     private AccountList accountList;   // 儲存帳目資料的容器
     private Account account;           // 暫存使用者輸入的帳目
-    private JButton enterbutton, displaybutton, queryByDateButton, deleteByDateButton, deletebutton, searchByNoteButton, statsButton;
+    private JFrame frame;              // 主視窗
+    private JPanel panel;              // 主面板
     private JTextArea area;            // 顯示訊息的文字區域
-    private JTextField datefield, breakfastfield, lunchfield, dinnerfield, othersfield, notefield;
+    private JMenu menu;                // 選單列
+    private JTextField breakfastfield, lunchfield, dinnerfield, othersfield, incomfield, notefield;
+    private JButton enterbutton, displaybutton, queryByDateButton, deleteByDateButton, deletebutton, searchByNoteButton, statsButton;
     private StreamHelper streamhelper; // 負責檔案讀寫的工具
-    private JMenu menu;
+    private JDateChooser dateChooser;  // JDateChooser 用於日期選擇
 
     public void buildGUI() { 
         frame = new JFrame("記帳小幫手");
@@ -53,32 +61,52 @@ public class AccountGUI {
         JPanel centerPanel = new JPanel(new GridLayout(1, 3, 10, 10));
 
         // 左側 label
-        JPanel leftPanel = new JPanel(new GridLayout(7, 1, 5, 5));
+        JPanel leftPanel = new JPanel(new GridLayout(8, 1, 5, 5));
         Font font = new Font("Microsoft JhengHei", Font.PLAIN, 14);
-        leftPanel.add(createLabel("日期（格式為YYYY/MM/DD）：", font));
-        leftPanel.add(createLabel("早餐支出：", font));
-        leftPanel.add(createLabel("午餐支出：", font));
-        leftPanel.add(createLabel("晚餐支出：", font));
-        leftPanel.add(createLabel("其他支出：", font));
+        leftPanel.add(createLabel("帳目日期（格式為YYYY/MM/DD）：", font));
+        leftPanel.add(createLabel("早餐支出（若空白則視為0）：", font));
+        leftPanel.add(createLabel("午餐支出（若空白則視為0）：", font));
+        leftPanel.add(createLabel("晚餐支出（若空白則視為0）：", font));
+        leftPanel.add(createLabel("其他支出（若空白則視為0）：", font));
+        leftPanel.add(createLabel("額外收入（若空白則視為0）：", font));
         leftPanel.add(createLabel("帳目備註（若空白則視為無）：", font));
         leftPanel.add(createLabel("若要修改帳目，重新輸入後儲存即可", font));
 
         // 中間輸入欄位
-        JPanel inputPanel = new JPanel(new GridLayout(7, 1, 5, 5));
-        datefield = new JTextField();
+        JPanel inputPanel = new JPanel(new GridLayout(8, 1, 5, 5));
+        dateChooser = new JDateChooser();
         breakfastfield = new JTextField();
         lunchfield = new JTextField();
         dinnerfield = new JTextField();
         othersfield = new JTextField();
+        incomfield = new JTextField();
         notefield = new JTextField();
-        inputPanel.add(datefield);
+        enterbutton = new JButton("儲存帳目");
+
+        inputPanel.add(dateChooser);
         inputPanel.add(breakfastfield);
         inputPanel.add(lunchfield);
         inputPanel.add(dinnerfield);
         inputPanel.add(othersfield);
+        inputPanel.add(incomfield);
         inputPanel.add(notefield);
-        enterbutton = new JButton("儲存帳目");
         inputPanel.add(enterbutton);
+
+        // 設定日期選擇器的格式
+        dateChooser.setDateFormatString("yyyy/MM/dd");
+        dateChooser.setDate(new Date()); // 預設值為今天
+
+        // 設定最小與最大可選日期
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+            Date minDate = sdf.parse("1900/01/01");
+            Date maxDate = new Date(); // 今天
+
+            dateChooser.setMinSelectableDate(minDate);
+            dateChooser.setMaxSelectableDate(maxDate);
+        } catch (ParseException ev) {
+            ev.printStackTrace();
+        }
 
         // 右側功能按鈕
         JPanel rightPanel = new JPanel(new GridLayout(6, 1, 5, 5));
@@ -87,7 +115,7 @@ public class AccountGUI {
         deleteByDateButton = new JButton("刪除指定日期帳目");
         deletebutton = new JButton("清除所有帳目資料");
         searchByNoteButton = new JButton("查詢備註的關鍵字");
-        statsButton = new JButton("查看所有帳目統計");
+        statsButton = new JButton("查看統計顯示圖表");
         rightPanel.add(displaybutton);
         rightPanel.add(queryByDateButton);
         rightPanel.add(deleteByDateButton);
@@ -103,6 +131,7 @@ public class AccountGUI {
 
         // 上方區域為文字區域
         area = new JTextArea();
+        area.setEditable(false); // ← 加這一行讓文字區域唯讀
         area.setFont(new Font("Monospaced", Font.PLAIN, 14));
         area.setForeground(Color.BLACK);
         area.setLineWrap(true);
@@ -147,13 +176,28 @@ public class AccountGUI {
         showDailyQuote();
     }
 
+    // 建立選單列
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
 
         Font menuFont = new Font("Microsoft JhengHei", Font.PLAIN, 16);
 
-        menu = new JMenu("檔案管理");
+        menu = new JMenu("另存/讀取檔案");
         menu.setFont(menuFont);
+        menu.setForeground(Color.BLACK); // 預設顏色
+
+        // 讓檔案管理更顯目
+        menu.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                menu.setForeground(Color.BLUE); // 滑鼠移上去變藍色
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                menu.setForeground(Color.BLACK); // 移開回復黑色
+            }
+        });
 
         JMenuItem saveMenuItem = new JMenuItem("另存帳目新檔");
         JMenuItem loadMenuItem = new JMenuItem("讀取帳目檔案");
@@ -206,40 +250,56 @@ public class AccountGUI {
         return sdf.format(new Date());
     }
 
-    // 輸入帳目按鈕：檢查欄位並建立帳目物件
+    // 儲存帳目到檔案
     public class EnterListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             StringBuilder errorMsg = new StringBuilder();
-            String date = datefield.getText().trim();
+            
+            Date selectedDate = dateChooser.getDate();
+            String date = "";
 
-            if (!DateUtils.isValidDate(date)) {
-                errorMsg.append("❌ 日期格式為空或為無效日期（請輸入：YYYY/MM/DD）\n");
-            } else if (DateUtils.isFutureDate(date)) {
-                errorMsg.append("❌ 不可以輸入未來的日期\n");
+            if (selectedDate == null) {
+                errorMsg.append("❌ 日期為空或為無效日期，請輸入：YYYY/MM/DD\n");
+            } else {
+                date = new SimpleDateFormat("yyyy/MM/dd").format(selectedDate);
+
+                if (DateUtils.isFutureDate(date)) {
+                    errorMsg.append("❌ 不可以輸入未來的日期\n");
+                }
             }
 
-            String[] labels = { "早餐", "午餐", "晚餐", "其他" };
-            JTextField[] fields = { breakfastfield, lunchfield, dinnerfield, othersfield };
-            int[] values = new int[4];
+            String[] labels = { "早餐", "午餐", "晚餐", "其他", "收入" };
+            JTextField[] fields = { breakfastfield, lunchfield, dinnerfield, othersfield, incomfield };
+            int[] values = new int[5];
+            boolean hasNonZero = false;
 
-            for (int i = 0; i < 4; i++) {
+            // 處理金額欄位
+            for (int i = 0; i < 5; i++) {
                 String text = fields[i].getText().trim();
+
                 if (text.isEmpty()) {
-                    errorMsg.append("❌ " + labels[i] + "金額不能為空\n");
-                    continue;
-                }
-                try {
-                    values[i] = Integer.parseInt(text);
-                    if (values[i] < 0) {
-                        errorMsg.append("❌ " + labels[i] + "金額不能為負數\n");
+                    values[i] = 0;  // 空值視為 0 元
+                } else {
+                    try {
+                        values[i] = Integer.parseInt(text);
+                        if (values[i] < 0) {
+                            errorMsg.append("❌ " + labels[i] + "金額不能為負數\n");
+                        } else if (values[i] > 0) {
+                            hasNonZero = true; // 有有效金額
+                        }
+                    } catch (NumberFormatException e) {
+                        errorMsg.append("❌ " + labels[i] + "金額格式錯誤（請輸入有效整數）\n");
                     }
-                } catch (NumberFormatException e) {
-                    errorMsg.append("❌ " + labels[i] + "金額格式錯誤（請輸入有效整數）\n");
                 }
             }
 
-            // 取得備註
+            if (!hasNonZero) {
+                errorMsg.append("❌ 至少要輸入一個不是 0 的有效金額（早餐、午餐、晚餐、其他、收入）\n");
+            }
+
+            // 備註欄位
             String note = notefield.getText().trim();
+
             if (note.isEmpty()) {
                 note = "無";
             }
@@ -249,23 +309,28 @@ public class AccountGUI {
                 return;
             }
 
-            // 如果通過驗證，設定變數
+            // 所有金額欄位轉換
             int breakfast = values[0];
             int lunch = values[1];
             int dinner = values[2];
             int others = values[3];
+            int income = values[4];
+            int net = income - (breakfast + lunch + dinner + others);
 
-            // 檢查是否已有相同日期的帳目
+            // 更新或新增帳目
             boolean accountExists = false;
+
             for (int i = 0; i < accountList.size(); i++) {
                 Account existingAccount = accountList.get(i);
 
+                // 如果日期相同，則更新該筆帳目
                 if (existingAccount.getDate().equals(date)) {
-                    // 如果已經有相同日期的帳目，更新該帳目
                     existingAccount.setBreakfast(breakfast);
                     existingAccount.setLunch(lunch);
                     existingAccount.setDinner(dinner);
                     existingAccount.setOthers(others);
+                    existingAccount.setIncome(income);
+                    existingAccount.setNet(net);
                     existingAccount.setNote(note);
                     area.setText("✅ 帳目已更新！ 日期：" + date);
                     accountExists = true;
@@ -273,20 +338,20 @@ public class AccountGUI {
                 }
             }
 
-            // 如果沒有相同日期的帳目，則新增一筆帳目
+            // 如果沒有找到相同日期的帳目，則新增一筆
             if (!accountExists) {
-                account = new Account(breakfast, lunch, dinner, others, date, note);
+                account = new Account(date, breakfast, lunch, dinner, others, income, net, note);
                 accountList.add(account);
                 account = null;
                 area.setText("✅ 帳目建立成功！");
             }
 
-            // 清空輸入欄位
-            datefield.setText("");
+            // 清空欄位
             breakfastfield.setText("");
             lunchfield.setText("");
             dinnerfield.setText("");
             othersfield.setText("");
+            incomfield.setText("");
             notefield.setText("");
         }
     }
@@ -313,24 +378,53 @@ public class AccountGUI {
     // 查詢特定日期的帳目資料
     public class QueryByDateListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
-            String date = JOptionPane.showInputDialog(frame, "請輸入查詢日期（格式：YYYY/MM/DD）：", "查詢視窗", JOptionPane.QUESTION_MESSAGE);
+            // 建立日期選擇器
+            JDateChooser dateChooser = new JDateChooser();
+            dateChooser.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
+            dateChooser.setDateFormatString("yyyy/MM/dd");
 
-            if (date == null) return; // 使用者取消
+            // 限制可選日期範圍：1900/01/01 ~ 今天
+            Calendar min = Calendar.getInstance();
+            min.set(1900, Calendar.JANUARY, 1);
 
-            if (!DateUtils.isValidDate(date)) {
-                JOptionPane.showMessageDialog(frame, "❌ 日期為空或為無效日期，請輸入：YYYY/MM/DD", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
+            dateChooser.setMinSelectableDate(min.getTime()); // 最小為 1900/01/01
+            dateChooser.setMaxSelectableDate(new Date()); // 最大為今天
+            dateChooser.setDate(new Date()); // 預設值為今天
+
+            // 顯示在 JOptionPane 中
+            int result = JOptionPane.showConfirmDialog(
+                frame,
+                dateChooser,
+                "請選擇查詢日期",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (result != JOptionPane.OK_OPTION) return;
+
+            // 取得選擇的日期
+            Date selectedDate = dateChooser.getDate();
+
+            if (selectedDate == null) {
+                JOptionPane.showMessageDialog(frame, "❌ 日期為空或為無效日期", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
                 return;
-            } else if (DateUtils.isFutureDate(date)) {
+            }
+
+            // 轉換成 yyyy/MM/dd 格式字串
+            String date = new SimpleDateFormat("yyyy/MM/dd").format(selectedDate);
+
+
+            if (DateUtils.isFutureDate(date)) {
                 JOptionPane.showMessageDialog(frame, "❌ 不可以輸入未來的日期\n", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
+            // 查詢帳目
             for (int i = 0; i < accountList.size(); i++) {
                 Account acc = accountList.get(i);
-
                 if (acc.getDate().equals(date)) {
                     area.setText("🔎 查詢結果：\n\n" + acc.printAccount());
-                    return; // 茶道並顯示後，結束迴圈
+                    return;
                 }
             }
 
@@ -338,43 +432,67 @@ public class AccountGUI {
         }
     }
 
-    // 刪除特定日期的帳目資料
     public class DeleteByDateListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
-            String date = JOptionPane.showInputDialog(frame, "請輸入要刪除的日期（格式：YYYY/MM/DD）：", "刪除視窗", JOptionPane.QUESTION_MESSAGE);
+            // 建立日期選擇器
+            JDateChooser dateChooser = new JDateChooser();
+            dateChooser.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
+            dateChooser.setDateFormatString("yyyy/MM/dd");
 
-            if (date == null) return; // 使用者取消
-            
-            if (!DateUtils.isValidDate(date)) {
-                JOptionPane.showMessageDialog(frame, "❌ 日期為空或為無效日期，請輸入：YYYY/MM/DD", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
-                return;
-            } else if (DateUtils.isFutureDate(date)) {
-                JOptionPane.showMessageDialog(frame, "❌ 不可以輸入未來的日期\n", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+            // 限制只能選 1900/01/01 ~ 今天
+            Calendar min = Calendar.getInstance();
+            min.set(1900, Calendar.JANUARY, 1);
+            dateChooser.setMinSelectableDate(min.getTime());
+            dateChooser.setMaxSelectableDate(new Date());
+            dateChooser.setDate(new Date()); // 預設今天
 
-            for (int i = 0; i < accountList.size(); i++) {
-                Account acc = accountList.get(i);
+            int result = JOptionPane.showConfirmDialog(
+                frame,
+                dateChooser,
+                "請選擇要刪除的日期",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+            );
 
-                if (acc.getDate().equals(date)) {
-                    int confirm = JOptionPane.showConfirmDialog(
+            if (result == JOptionPane.OK_OPTION) {
+                Date selectedDate = dateChooser.getDate();
+
+                if (selectedDate == null) {
+                    JOptionPane.showMessageDialog(frame, "❌ 日期為空或為無效日期", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                String date = new SimpleDateFormat("yyyy/MM/dd").format(selectedDate);
+
+                if (DateUtils.isFutureDate(date)) {
+                    JOptionPane.showMessageDialog(frame, "❌ 不可以輸入未來的日期\n", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // 查找並刪除資料
+                for (int i = 0; i < accountList.size(); i++) {
+                    Account acc = accountList.get(i);
+
+                    if (acc.getDate().equals(date)) {
+                        int confirm = JOptionPane.showConfirmDialog(
                             frame,
                             "確定要刪除 " + date + " 的帳目資料嗎？",
                             "確認刪除",
                             JOptionPane.YES_NO_OPTION
-                    );
+                        );
 
-                    if (confirm == JOptionPane.YES_OPTION) {
-                        accountList.remove(i);
-                        area.setText("✅ 已刪除 " + date + " 的帳目資料");
-                    } else {
-                        area.setText("❌ 取消刪除操作");
+                        if (confirm == JOptionPane.YES_OPTION) {
+                            accountList.remove(i);
+                            area.setText("✅ 已刪除 " + date + " 的帳目資料");
+                        } else {
+                            area.setText("❌ 取消刪除操作");
+                        }
+                        return;
                     }
-                    return; // 找到並刪除後，結束迴圈
                 }
-            }
 
-            area.setText("⚠️ 無法刪除，查無 " + date + " 的帳目資料");
+                area.setText("⚠️ 無法刪除，查無 " + date + " 的帳目資料");
+            }
         }
     }
 
@@ -463,211 +581,330 @@ public class AccountGUI {
             // 年統計查詢邏輯
             yearButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent ev) {
-                    String year = JOptionPane.showInputDialog(statsFrame, "請輸入年份（例如：2025）");
+                    // 建立年份選擇器
+                    JYearChooser yearChooser = new JYearChooser();
+                    yearChooser.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
+                    yearChooser.setStartYear(1900);
+                    yearChooser.setEndYear(Calendar.getInstance().get(Calendar.YEAR));
 
-                    if (year == null) return; // 按下取消或關閉
+                    // 放進 JOptionPane
+                    int result = JOptionPane.showConfirmDialog(
+                        statsFrame,
+                        yearChooser,
+                        "請選擇年份",
+                        JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.PLAIN_MESSAGE
+                    );
 
-                    if (!DateUtils.isValidYear(year)) {
-                        JOptionPane.showMessageDialog(statsFrame, "❌ 輸入為空或不是有效年份，請輸入 4 位數的有效年份，例如：2025", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
+                    // 如果使用者按下 OK
+                    if (result == JOptionPane.OK_OPTION) {
+                        int selectedYear = yearChooser.getYear();
 
-                    int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0;
+                        // 轉成字串可用於查詢或顯示
+                        String year = String.valueOf(selectedYear);
+                        
+                        // 進行統計
+                        int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0, incomeTotal = 0;
 
-                    double[] monthlyTotals = new double[12]; // 用來存每月支出總和
+                        double[] monthlyTotals = new double[12]; // 用來存每月支出總和
+                        double[] monthlyIncome = new double[12]; // 用來存每月收入總和
 
-                    for (int i = 0; i < accountList.size(); i++) {
-                        Account acc = accountList.get(i);
-                        if (acc.getDate().startsWith(year)) {
-                            breakfastTotal += acc.getBreakfast();
-                            lunchTotal += acc.getLunch();
-                            dinnerTotal += acc.getDinner();
-                            othersTotal += acc.getOthers();
-                            total += acc.getTotal();
+                        for (int i = 0; i < accountList.size(); i++) {
+                            Account acc = accountList.get(i);
+                            if (acc.getDate().startsWith(year)) {
+                                breakfastTotal += acc.getBreakfast();
+                                lunchTotal += acc.getLunch();
+                                dinnerTotal += acc.getDinner();
+                                othersTotal += acc.getOthers();
+                                total += acc.getTotal();
+                                incomeTotal += acc.getIncome();
 
-                            // 取月份（假設格式是 yyyy/MM/dd），畫圖用到的
-                            String[] parts = acc.getDate().split("/");
-                            if (parts.length >= 2) {
-                                int monthIndex = Integer.parseInt(parts[1]) - 1;
-                                if (monthIndex >= 0 && monthIndex < 12) {
-                                    monthlyTotals[monthIndex] += acc.getTotal();
+                                // 取月份（假設格式是 yyyy/MM/dd），畫圖用到的
+                                String[] parts = acc.getDate().split("/");
+                                if (parts.length >= 2) {
+                                    int monthIndex = Integer.parseInt(parts[1]) - 1;
+                                    if (monthIndex >= 0 && monthIndex < 12) {
+                                        monthlyTotals[monthIndex] += acc.getTotal();
+                                        monthlyIncome[monthIndex] += acc.getIncome();
+                                    }
                                 }
                             }
                         }
+
+                        // 顯示統計結果
+                        String statsMessage = year + "年統計：\n"
+                                + "早餐總支出：" + breakfastTotal + " 元\n"
+                                + "午餐總支出：" + lunchTotal + " 元\n"
+                                + "晚餐總支出：" + dinnerTotal + " 元\n"
+                                + "其他總支出：" + othersTotal + " 元\n"
+                                + "全部總支出：" + total + " 元\n"
+                                + "額外總收入：" + incomeTotal + " 元\n"
+                                + "全部淨支出：" + (incomeTotal - total) + " 元\n";
+                                
+                        JOptionPane.showMessageDialog(statsFrame, statsMessage, "年統計結果", JOptionPane.INFORMATION_MESSAGE);
+
+                        // === 建立「每月總支出」的圖表 ===
+                        DefaultCategoryDataset monthlyDataset = new DefaultCategoryDataset();
+                        String monthlySeriesName = "每月支出";
+                        String[] monthNames = { "1月", "2月", "3月", "4月", "5月", "6月", 
+                                                "7月", "8月", "9月", "10月", "11月", "12月" };
+
+                        for (int i = 0; i < 12; i++) {
+                            monthlyDataset.addValue(monthlyTotals[i], monthlySeriesName, monthNames[i]);
+                        }
+
+                        JFreeChart monthlyChart = ChartFactory.createBarChart(
+                            year + "年每月總支出",
+                            "月份",
+                            "金額（元）",
+                            monthlyDataset,
+                            PlotOrientation.VERTICAL,
+                            true,                    // 是否顯示圖例
+                            true,                    // 是否顯示 tooltip
+                            false                    // 是否啟用 URL 功能
+                        );
+
+                        ChartPanel monthlyChartPanel = new ChartPanel(monthlyChart);
+
+                        // === 建立「餐別總支出」的圓餅圖 ===
+                        DefaultPieDataset pieDataset = new DefaultPieDataset();
+
+                        pieDataset.setValue("早餐", breakfastTotal);
+                        pieDataset.setValue("午餐", lunchTotal);
+                        pieDataset.setValue("晚餐", dinnerTotal);
+                        pieDataset.setValue("其他", othersTotal);
+
+                        JFreeChart pieChart = ChartFactory.createPieChart(
+                            year + "年各類別總支出", // 圖表標題
+                            pieDataset,              // 資料集
+                            true,                    // 是否顯示圖例
+                            true,                    // 是否生成提示
+                            false                    // 是否生成URL連結
+                        );
+
+                        ChartPanel pieChartPanel = new ChartPanel(pieChart);
+
+                        // === 建立「每月收入」長條圖 ===
+                        DefaultCategoryDataset incomeDataset = new DefaultCategoryDataset();
+                        String incomeSeries = "每月收入";
+
+                        for (int i = 0; i < 12; i++) {
+                            incomeDataset.addValue(monthlyIncome[i], incomeSeries, monthNames[i]);
+                        }
+
+                        JFreeChart incomeChart = ChartFactory.createBarChart(
+                            year + "年每月總收入",
+                            "月份",
+                            "金額（元）",
+                            incomeDataset,
+                            PlotOrientation.VERTICAL,
+                            true,                    // 是否顯示圖例
+                            true,                    // 是否顯示 tooltip
+                            false                    // 是否啟用 URL 功能
+                        );
+
+                        // 設定長條顏色為藍色
+                        CategoryPlot incomePlot = incomeChart.getCategoryPlot();
+                        BarRenderer incomeRenderer = (BarRenderer) incomePlot.getRenderer();
+                        incomeRenderer.setSeriesPaint(0, new Color(0, 0, 255)); // 收入改成藍色
+
+                        ChartPanel incomeChartPanel = new ChartPanel(incomeChart);
+
+                        // === 建立「收入與支出」折線圖 ===
+                        DefaultCategoryDataset lineDataset = new DefaultCategoryDataset();
+                        String expenseLine = "支出";
+                        String incomeLine = "收入";
+
+                        for (int i = 0; i < 12; i++) {
+                            lineDataset.addValue(monthlyTotals[i], expenseLine, monthNames[i]);
+                            lineDataset.addValue(monthlyIncome[i], incomeLine, monthNames[i]);
+                        }
+
+                        JFreeChart lineChart = ChartFactory.createLineChart(
+                            year + "年每月收入與支出比較",
+                            "月份",
+                            "金額（元）",
+                            lineDataset,
+                            PlotOrientation.VERTICAL,
+                            true,                    // 是否顯示圖例
+                            true,                    // 是否顯示 tooltip
+                            false                    // 是否啟用 URL 功能
+                        );
+
+                        // 取得 plot，並設定 renderer 顯示圖形（資料點）
+                        CategoryPlot plot = lineChart.getCategoryPlot();
+                        LineAndShapeRenderer renderer = new LineAndShapeRenderer();
+
+                        // 讓兩條線都顯示圓點、填滿圓點、顯示提示訊息
+                        for (int i = 0; i < 2; i++) {
+                            renderer.setSeriesShapesVisible(i, true);  // 顯示資料點
+                            renderer.setSeriesShapesFilled(i, true);   // 填滿資料點
+                            renderer.setSeriesToolTipGenerator(i, new StandardCategoryToolTipGenerator());
+                        }
+
+                        // 將 renderer 套用到圖表
+                        plot.setRenderer(renderer);
+
+                        ChartPanel lineChartPanel = new ChartPanel(lineChart);
+
+                        // === 建立視窗，同時顯示四張圖表 ===
+                        JPanel chartsPanel = new JPanel(new GridLayout(2, 2));
+                        chartsPanel.add(monthlyChartPanel);  // 每月支出長條圖
+                        chartsPanel.add(pieChartPanel);      // 餐別支出圓餅圖
+                        chartsPanel.add(incomeChartPanel);   // 每月收入長條圖
+                        chartsPanel.add(lineChartPanel);     // 收支折線圖
+
+                        JFrame chartFrame = new JFrame(year + "年支出圖表");
+                        chartFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                        chartFrame.add(chartsPanel);
+                        chartFrame.setSize(1000, 800);
+                        chartFrame.setLocationRelativeTo(statsFrame);
+                        chartFrame.setVisible(true);
                     }
-
-                    String statsMessage = year + "年統計：\n"
-                            + "早餐總支出：" + breakfastTotal + " 元\n"
-                            + "午餐總支出：" + lunchTotal + " 元\n"
-                            + "晚餐總支出：" + dinnerTotal + " 元\n"
-                            + "其他總支出：" + othersTotal + " 元\n"
-                            + "總支出：" + total + " 元";
-                    JOptionPane.showMessageDialog(statsFrame, statsMessage);
-
-                    // === 建立「每月總支出」的圖表 ===
-                    DefaultCategoryDataset monthlyDataset = new DefaultCategoryDataset();
-                    String monthlySeriesName = "每月支出";
-                    String[] monthNames = { "1月", "2月", "3月", "4月", "5月", "6月", 
-                                            "7月", "8月", "9月", "10月", "11月", "12月" };
-
-                    for (int i = 0; i < 12; i++) {
-                        monthlyDataset.addValue(monthlyTotals[i], monthlySeriesName, monthNames[i]);
-                    }
-
-                    JFreeChart monthlyChart = ChartFactory.createBarChart(
-                        year + "年每月總支出",
-                        "月份",
-                        "金額（元）",
-                        monthlyDataset,
-                        PlotOrientation.VERTICAL,
-                        false, true, false
-                    );
-
-                    ChartPanel monthlyChartPanel = new ChartPanel(monthlyChart);
-
-                    // === 建立「餐別總支出」的圖表 ===
-                    DefaultCategoryDataset mealDataset = new DefaultCategoryDataset();
-                    String mealSeriesName = "各類別支出";
-
-                    mealDataset.addValue(breakfastTotal, mealSeriesName, "早餐");
-                    mealDataset.addValue(lunchTotal, mealSeriesName, "午餐");
-                    mealDataset.addValue(dinnerTotal, mealSeriesName, "晚餐");
-                    mealDataset.addValue(othersTotal, mealSeriesName, "其他");
-
-                    JFreeChart mealChart = ChartFactory.createBarChart(
-                        year + "年各類別總支出",
-                        "類別",
-                        "金額（元）",
-                        mealDataset,
-                        PlotOrientation.VERTICAL,
-                        false, true, false
-                    );
-
-                    ChartPanel mealChartPanel = new ChartPanel(mealChart);
-
-                    // === 建立視窗，同時顯示兩張圖表 ===
-                    JPanel chartsPanel = new JPanel(new GridLayout(1, 2)); // 1 列 2 欄的格狀版面
-                    chartsPanel.add(monthlyChartPanel);
-                    chartsPanel.add(mealChartPanel);
-
-                    JFrame chartFrame = new JFrame(year + "年支出圖表");
-                    chartFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                    chartFrame.add(chartsPanel);
-                    chartFrame.setSize(1000, 500);
-                    chartFrame.setLocationRelativeTo(statsFrame);
-                    chartFrame.setVisible(true);
                 }
             });
 
             // 月統計查詢邏輯
             monthButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent ev) {
-                    int day;
-                    String month = JOptionPane.showInputDialog(statsFrame, "請輸入年份和月份（格式：YYYY/MM）");
+                    // 建立年份選擇器
+                    JYearChooser yearChooser = new JYearChooser();
+                    yearChooser.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
+                    yearChooser.setStartYear(1900);
+                    yearChooser.setEndYear(Calendar.getInstance().get(Calendar.YEAR));
 
-                    if (month == null) return;
+                    // 建立月份選擇器
+                    JMonthChooser monthChooser = new JMonthChooser();
+                    monthChooser.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
 
-                    day = DateUtils.getDaysInYearMonth(month);
+                    // 建立一個容器，將兩個選擇器並排顯示
+                    JPanel panel = new JPanel(new GridLayout(2, 1, 5, 5));
+                    panel.add(new JLabel("選擇年份："));
+                    panel.add(yearChooser);
+                    panel.add(new JLabel("選擇月份："));
+                    panel.add(monthChooser);
 
-                    if (day == 0) {
-                        JOptionPane.showMessageDialog(statsFrame, "❌ 輸入為空或不是有效年月份，請輸入有效的年月份，例如：2025/05", "輸入錯誤", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
+                    // 放進 JOptionPane
+                    int result = JOptionPane.showConfirmDialog(
+                        statsFrame,
+                        panel,
+                        "請選擇年份和月份",
+                        JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.PLAIN_MESSAGE
+                    );
 
-                    int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0;
+                    // 如果使用者按下 OK 按鈕
+                    if (result == JOptionPane.OK_OPTION) {
+                        int selectedYear = yearChooser.getYear();
+                        int selectedMonth = monthChooser.getMonth() + 1; // 月份從 0 開始，所以 +1
 
-                    for (int i = 0; i < accountList.size(); i++) {
-                        Account acc = accountList.get(i);
-                        if (acc.getDate().startsWith(month)) {
-                            breakfastTotal += acc.getBreakfast();
-                            lunchTotal += acc.getLunch();
-                            dinnerTotal += acc.getDinner();
-                            othersTotal += acc.getOthers();
-                            total += acc.getTotal();
-                        }
-                    }
+                        // 格式組合成 "YYYY/MM"
+                        String month = String.format("%04d/%02d", selectedYear, selectedMonth);
 
-                    String statsMessage = month + " 統計：\n"
-                            + "早餐總支出：" + breakfastTotal + " 元\n"
-                            + "午餐總支出：" + lunchTotal + " 元\n"
-                            + "晚餐總支出：" + dinnerTotal + " 元\n"
-                            + "其他總支出：" + othersTotal + " 元\n"
-                            + "總支出：" + total + " 元";
-                    JOptionPane.showMessageDialog(statsFrame, statsMessage);
+                        int day = DateUtils.getDaysInYearMonth(month);
 
-                    // === 準備每日支出的折線圖資料集 ===
-
-                    DefaultCategoryDataset lineDataset = new DefaultCategoryDataset();
-                    String lineSeries = " 每日總支出";
-
-                    for (int d = 1; d <= day; d++) {
-                        String dayStr = String.format("%02d", d); // 補零，例如 01、02
-                        String targetDatePrefix = month + "/" + dayStr;
-                        int dailyTotal = 0;
+                        int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0, incomeTotal = 0;
 
                         for (int i = 0; i < accountList.size(); i++) {
                             Account acc = accountList.get(i);
-                            if (acc.getDate().startsWith(targetDatePrefix)) {
-                                dailyTotal += acc.getTotal();
+                            if (acc.getDate().startsWith(month)) {
+                                breakfastTotal += acc.getBreakfast();
+                                lunchTotal += acc.getLunch();
+                                dinnerTotal += acc.getDinner();
+                                othersTotal += acc.getOthers();
+                                total += acc.getTotal();
+                                incomeTotal += acc.getIncome();
                             }
                         }
 
-                        lineDataset.addValue(dailyTotal, lineSeries, String.valueOf(d)); // x 軸是 "1", "2", ...
+                        String statsMessage = month + " 統計：\n"
+                                + "早餐總支出：" + breakfastTotal + " 元\n"
+                                + "午餐總支出：" + lunchTotal + " 元\n"
+                                + "晚餐總支出：" + dinnerTotal + " 元\n"
+                                + "其他總支出：" + othersTotal + " 元\n"
+                                + "全部總支出：" + total + " 元\n"
+                                + "額外總收入：" + incomeTotal + " 元\n"
+                                + "全部淨支出：" + (incomeTotal - total) + " 元\n";
+
+                        JOptionPane.showMessageDialog(statsFrame, statsMessage, "月統計結果", JOptionPane.INFORMATION_MESSAGE);
+
+                        // === 準備每日收入與支出的折線圖資料集 ===
+                        DefaultCategoryDataset lineDataset = new DefaultCategoryDataset();
+                        String expenseLine = "每日支出";
+                        String incomeLine = "每日收入";
+
+                        for (int d = 1; d <= day; d++) {
+                            String dayStr = String.format("%02d", d); // 補零 01~31
+                            String targetDatePrefix = month + "/" + dayStr;
+                            int dailyTotal = 0;
+                            int dailyIncome = 0;
+
+                            for (int i = 0; i < accountList.size(); i++) {
+                                Account acc = accountList.get(i);
+                                if (acc.getDate().startsWith(targetDatePrefix)) {
+                                    dailyTotal += acc.getTotal();
+                                    dailyIncome += acc.getIncome();
+                                }
+                            }
+
+                            String xLabel = String.valueOf(d); // x軸標籤：1~31
+                            lineDataset.addValue(dailyTotal, expenseLine, xLabel);
+                            lineDataset.addValue(dailyIncome, incomeLine, xLabel);
+                        }
+
+                        JFreeChart lineChart = ChartFactory.createLineChart(
+                            month + " 每日收入與支出",
+                            "日",
+                            "金額（元）",
+                            lineDataset,
+                            PlotOrientation.VERTICAL,
+                            true,
+                            true,
+                            false
+                        );
+
+                        CategoryPlot plot = lineChart.getCategoryPlot();
+                        LineAndShapeRenderer renderer = new LineAndShapeRenderer();
+
+                        for (int i = 0; i < 2; i++) {
+                            renderer.setSeriesShapesVisible(i, true);
+                            renderer.setSeriesShapesFilled(i, true);
+                            renderer.setSeriesToolTipGenerator(i, new StandardCategoryToolTipGenerator());
+                        }
+
+                        plot.setRenderer(renderer);
+
+                        ChartPanel lineChartPanel = new ChartPanel(lineChart);
+
+                        // === 準備餐別支出的圓餅圖資料集 ===
+                        DefaultPieDataset pieDataset = new DefaultPieDataset();
+                        pieDataset.setValue("早餐", breakfastTotal);
+                        pieDataset.setValue("午餐", lunchTotal);
+                        pieDataset.setValue("晚餐", dinnerTotal);
+                        pieDataset.setValue("其他", othersTotal);
+
+                        JFreeChart pieChart = ChartFactory.createPieChart(
+                            month + " 各類別總支出",
+                            pieDataset,
+                            true,
+                            true,
+                            false
+                        );
+
+                        ChartPanel pieChartPanel = new ChartPanel(pieChart);
+
+                        // === 建立面板，顯示兩張圖 ===
+                        JPanel chartsPanel = new JPanel(new GridLayout(1, 2));
+                        chartsPanel.add(lineChartPanel);
+                        chartsPanel.add(pieChartPanel);
+
+                        JFrame chartFrame = new JFrame(month + " 支出圖表");
+                        chartFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+                        chartFrame.add(chartsPanel);
+                        chartFrame.setSize(1200, 500);
+                        chartFrame.setLocationRelativeTo(statsFrame);
+                        chartFrame.setVisible(true);
                     }
-
-                    JFreeChart lineChart = ChartFactory.createLineChart(
-                        month + " 每日總支出",
-                        "日",
-                        "金額（元）",
-                        lineDataset,
-                        PlotOrientation.VERTICAL,
-                        false, true, false
-                    );
-
-                    // 取得 plot，並設定 renderer 顯示圖形（資料點）
-                    CategoryPlot plot = lineChart.getCategoryPlot();
-                    LineAndShapeRenderer renderer = new LineAndShapeRenderer();
-
-                    // 設定第一條線：顯示形狀、填滿形狀
-                    renderer.setSeriesShapesVisible(0, true);
-                    renderer.setSeriesShapesFilled(0, true);
-                    renderer.setSeriesToolTipGenerator(0, new StandardCategoryToolTipGenerator());
-
-                    // 將 renderer 套用到圖表
-                    plot.setRenderer(renderer);
-
-                    ChartPanel lineChartPanel = new ChartPanel(lineChart);
-
-                    // === 準備餐別支出的長條圖資料集 ===
-                    DefaultCategoryDataset mealDataset = new DefaultCategoryDataset();
-                    String mealSeries = " 各類別總支出";
-
-                    mealDataset.addValue(breakfastTotal, mealSeries, "早餐");
-                    mealDataset.addValue(lunchTotal, mealSeries, "午餐");
-                    mealDataset.addValue(dinnerTotal, mealSeries, "晚餐");
-                    mealDataset.addValue(othersTotal, mealSeries, "其他");
-
-                    JFreeChart mealChart = ChartFactory.createBarChart(
-                        month + " 各類別總支出",
-                        "類別",
-                        "金額（元）",
-                        mealDataset,
-                        PlotOrientation.VERTICAL,
-                        false, true, false
-                    );
-                    ChartPanel mealChartPanel = new ChartPanel(mealChart);
-
-                    // === 建立面板，顯示兩張圖 ===
-                    JPanel chartsPanel = new JPanel(new GridLayout(1, 2));
-                    chartsPanel.add(lineChartPanel);
-                    chartsPanel.add(mealChartPanel);
-
-                    JFrame chartFrame = new JFrame(month + " 支出圖表");
-                    chartFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-                    chartFrame.add(chartsPanel);
-                    chartFrame.setSize(1200, 500);
-                    chartFrame.setLocationRelativeTo(statsFrame);
-                    chartFrame.setVisible(true);
                 }
             });
 
@@ -682,22 +919,30 @@ public class AccountGUI {
 
             //用filter建立可儲存的檔案類型選項，以及用此選項辨別如何處理資料
             FileNameExtensionFilter csvFilter = new FileNameExtensionFilter("CSV 檔案 (*.csv)", "csv");
-            filechooser.setFileFilter(csvFilter);
+            FileNameExtensionFilter txtFilter = new FileNameExtensionFilter("TXT 檔案 (*.txt)", "txt");
+            filechooser.addChoosableFileFilter(csvFilter);
+            filechooser.addChoosableFileFilter(txtFilter);
             filechooser.setAcceptAllFileFilterUsed(true);
             
+            // 設定預設檔名
             if (filechooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
                 File selectedFile = filechooser.getSelectedFile();
                 FileNameExtensionFilter filter = (FileNameExtensionFilter)filechooser.getFileFilter();
                 String extension = filter.getExtensions()[0];
 
-                // 如果使用者沒有手動加上 .csv，幫他補上
+                // 如果使用者沒有手動加上 副檔名，幫他補上
                 if (!selectedFile.getName().toLowerCase().endsWith("." + extension)) {
                     selectedFile = new File(selectedFile.getAbsolutePath() + "." + extension);
                 }
 
+                // 儲存檔案
+                // 根據選擇的檔案類型，呼叫不同的儲存方法
                 switch(extension){
                     case "csv":
                         streamhelper.saveFileCsv(accountList, selectedFile);
+                        break;
+                    case "txt":
+                        streamhelper.saveFileTxt(accountList, selectedFile);
                         break;
                     default:
                         streamhelper.saveFileAll(accountList, selectedFile);
@@ -712,9 +957,25 @@ public class AccountGUI {
     public class LoadMenuListener implements ActionListener {
         public void actionPerformed(ActionEvent ev) {
             JFileChooser filechooser = new JFileChooser();
-
+            
+            // 用 filter 建立可讀取的檔案類型選項，以及用此選項辨別如何處理資料
             if (filechooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
-                accountList = streamhelper.loadFile(filechooser.getSelectedFile());
+                File file = filechooser.getSelectedFile();
+                String fileName = file.getName();
+                String extension = fileName.contains(".")? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : null;
+
+                // 如果使用者沒有手動加上副檔名，幫他補上
+                switch(extension){
+                    case "csv":
+                        accountList = streamhelper.loadFileCsv(filechooser.getSelectedFile());
+                        break;
+                    case "txt":
+                        accountList = streamhelper.loadFileTxt(filechooser.getSelectedFile());
+                        break;
+                    default:
+                        accountList = streamhelper.loadFileAll(filechooser.getSelectedFile());
+                        break;
+                }
                 area.setText("✅ 帳目檔案載入完成");
             }
         }
