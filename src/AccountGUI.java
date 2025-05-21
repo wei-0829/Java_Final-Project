@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.table.*;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -10,6 +11,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 // JFreeChart 相關的 import
 import org.jfree.chart.ChartFactory;
@@ -40,10 +43,23 @@ public class AccountGUI {
     private JPanel panel;              // 主面板
     private JTextArea area;            // 顯示訊息的文字區域
     private JMenu menu;                // 選單列
-    private JTextField breakfastfield, lunchfield, dinnerfield, othersfield, incomfield, notefield;
+    private JTextField notefield;
+    private JComboBox<String> typeComboBox;
     private JButton enterbutton, displaybutton, queryByDateButton, deleteByDateButton, deletebutton, searchByNoteButton, statsButton;
     private StreamHelper streamhelper; // 負責檔案讀寫的工具
     private JDateChooser dateChooser;  // JDateChooser 用於日期選擇
+    
+    // 定義金額輸入欄位
+    private Map<String, JTextField> amountFields = new HashMap<>();
+    
+    // 定義卡片面板
+    private JPanel cardPanel;
+    private CardLayout cardLayout;
+    
+    // 支出項目列表
+    private final String[] expenseItems = {"早餐", "午餐", "晚餐", "交通", "住宿", "衣著", "水電費", "娛樂", "醫療", "教育", "通訊費", "其他"};
+    // 收入項目列表
+    private final String[] incomeItems = {"額外收入", "薪資", "獎金", "投資收益", "副業", "禮金"};
 
     public void buildGUI() { 
         frame = new JFrame("記帳小幫手");
@@ -57,42 +73,36 @@ public class AccountGUI {
         panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // 中央區域（左側輸入 + 中間欄位 + 右側按鈕）
-        JPanel centerPanel = new JPanel(new GridLayout(1, 3, 10, 10));
-
-        // 左側 label
-        JPanel leftPanel = new JPanel(new GridLayout(8, 1, 5, 5));
+        // 中央區域（輸入區域 + 功能按鈕）
+        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
+        
+        // 右側功能按鈕
+        JPanel rightPanel = new JPanel(new GridLayout(6, 1, 5, 5));
+        displaybutton = new JButton("列出所有帳目資料");
+        queryByDateButton = new JButton("查詢指定日期帳目");
+        deleteByDateButton = new JButton("刪除指定日期帳目");
+        deletebutton = new JButton("清除所有帳目資料");
+        searchByNoteButton = new JButton("查詢備註的關鍵字");
+        statsButton = new JButton("查看統計顯示圖表");
+        rightPanel.add(displaybutton);
+        rightPanel.add(queryByDateButton);
+        rightPanel.add(deleteByDateButton);
+        rightPanel.add(deletebutton);
+        rightPanel.add(searchByNoteButton);
+        rightPanel.add(statsButton);
+        
+        // 創建左側輸入區域
+        JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new BorderLayout(5, 5));
+        
+        // 字體設定
         Font font = new Font("Microsoft JhengHei", Font.PLAIN, 14);
-        leftPanel.add(createLabel("帳目日期（格式為YYYY/MM/DD）：", font));
-        leftPanel.add(createLabel("早餐支出（若空白則視為0）：", font));
-        leftPanel.add(createLabel("午餐支出（若空白則視為0）：", font));
-        leftPanel.add(createLabel("晚餐支出（若空白則視為0）：", font));
-        leftPanel.add(createLabel("其他支出（若空白則視為0）：", font));
-        leftPanel.add(createLabel("額外收入（若空白則視為0）：", font));
-        leftPanel.add(createLabel("帳目備註（若空白則視為無）：", font));
-        leftPanel.add(createLabel("若要修改帳目，重新輸入後儲存即可", font));
-
-        // 中間輸入欄位
-        JPanel inputPanel = new JPanel(new GridLayout(8, 1, 5, 5));
+        
+        // 上半部 - 固定區域：日期選擇和類型選擇
+        JPanel topPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+        
+        // 日期選擇
         dateChooser = new JDateChooser();
-        breakfastfield = new JTextField();
-        lunchfield = new JTextField();
-        dinnerfield = new JTextField();
-        othersfield = new JTextField();
-        incomfield = new JTextField();
-        notefield = new JTextField();
-        enterbutton = new JButton("儲存帳目");
-
-        inputPanel.add(dateChooser);
-        inputPanel.add(breakfastfield);
-        inputPanel.add(lunchfield);
-        inputPanel.add(dinnerfield);
-        inputPanel.add(othersfield);
-        inputPanel.add(incomfield);
-        inputPanel.add(notefield);
-        inputPanel.add(enterbutton);
-
-        // 設定日期選擇器的格式
         dateChooser.setDateFormatString("yyyy/MM/dd");
         dateChooser.setDate(new Date()); // 預設值為今天
 
@@ -108,26 +118,74 @@ public class AccountGUI {
             ev.printStackTrace();
         }
 
-        // 右側功能按鈕
-        JPanel rightPanel = new JPanel(new GridLayout(6, 1, 5, 5));
-        displaybutton = new JButton("列出所有帳目資料");
-        queryByDateButton = new JButton("查詢指定日期帳目");
-        deleteByDateButton = new JButton("刪除指定日期帳目");
-        deletebutton = new JButton("清除所有帳目資料");
-        searchByNoteButton = new JButton("查詢備註的關鍵字");
-        statsButton = new JButton("查看統計顯示圖表");
-        rightPanel.add(displaybutton);
-        rightPanel.add(queryByDateButton);
-        rightPanel.add(deleteByDateButton);
-        rightPanel.add(deletebutton);
-        rightPanel.add(searchByNoteButton);
-        rightPanel.add(statsButton);
-
-        // 加入到中央 panel
-        centerPanel.add(leftPanel);
-        centerPanel.add(inputPanel);
-        centerPanel.add(rightPanel);
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // 中間區域四周留白
+        JLabel dateLabel = new JLabel("日期:");
+        dateLabel.setFont(font);
+        topPanel.add(dateLabel);
+        topPanel.add(dateChooser);
+        
+        // 類型選擇（收入/支出）
+        String[] types = {"支出", "收入"};
+        typeComboBox = new JComboBox<>(types);
+        typeComboBox.setFont(font);
+        
+        JLabel typeLabel = new JLabel("類型:");
+        typeLabel.setFont(font);
+        topPanel.add(typeLabel);
+        topPanel.add(typeComboBox);
+        
+        // 創建卡片面板存放不同類型的內容
+        cardPanel = new JPanel();
+        cardLayout = new CardLayout();
+        cardPanel.setLayout(cardLayout);
+        
+        // 支出面板 - 改為表格式佈局，項目和輸入欄位並排
+        JPanel expensePanel = createItemPanel(expenseItems, "支出項目");
+        
+        // 收入面板 - 同樣使用表格式佈局
+        JPanel incomePanel = createItemPanel(incomeItems, "收入項目");
+        
+        // 添加到卡片面板
+        cardPanel.add(expensePanel, "支出");
+        cardPanel.add(incomePanel, "收入");
+        
+        // 底部區域
+        JPanel bottomPanel = new JPanel(new BorderLayout(5, 5));
+        
+        // 備註面板
+        JPanel notePanel = new JPanel(new BorderLayout(5, 5));
+        notePanel.setBorder(BorderFactory.createTitledBorder("帳目備註(若空白則視為無)"));
+        
+        notefield = new JTextField(20);
+        // 移除備註標籤，只保留輸入欄
+        notePanel.add(notefield, BorderLayout.CENTER);
+        
+        // 儲存按鈕面板
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        enterbutton = new JButton("儲存帳目");
+        enterbutton.setFont(font);
+        buttonPanel.add(enterbutton);
+        
+        // 組合底部區域
+        bottomPanel.add(notePanel, BorderLayout.NORTH);
+        bottomPanel.add(buttonPanel, BorderLayout.CENTER);
+        
+        // 組合左側面板
+        leftPanel.add(topPanel, BorderLayout.NORTH);
+        leftPanel.add(cardPanel, BorderLayout.CENTER);
+        leftPanel.add(bottomPanel, BorderLayout.SOUTH);
+        
+        // 類型選擇器變化時切換卡片
+        typeComboBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                cardLayout.show(cardPanel, (String) typeComboBox.getSelectedItem());
+                clearInputFields();
+            }
+        });
+        
+        // 將左側面板和右側面板加入到中央面板
+        centerPanel.add(leftPanel, BorderLayout.CENTER);
+        centerPanel.add(rightPanel, BorderLayout.EAST);
 
         // 上方區域為文字區域
         area = new JTextArea();
@@ -137,26 +195,26 @@ public class AccountGUI {
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
         area.setBorder(null);
+        
+        // 設定初始文字内容
+        area.setText("歡迎使用《記帳小幫手》！\n請輸入今日的支出資料，並點擊『儲存帳目』開始記錄！");
 
         JScrollPane scroller = new JScrollPane(area,
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scroller.setBorder(null);
+        scroller.setPreferredSize(new Dimension(600, 150));
 
-        // 這行顯示歡迎訊息
-        area.setText("👋 歡迎使用《記帳小幫手》！\n請輸入今日的支出資料，並點擊『儲存帳目』開始記錄！");
+        // 組裝主面板
+        panel.add(scroller, BorderLayout.NORTH);
+        panel.add(centerPanel, BorderLayout.CENTER);
 
-        // 使用 JSplitPane 來分割上面和下面的區域
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scroller, centerPanel);
-        splitPane.setResizeWeight(0.5); // 調整時讓兩個區域的大小比例為 1:1
-        splitPane.setDividerLocation(250); // 直接設定分隔線為一半高度
-        splitPane.setDividerSize(5); // 分隔線寬度
-        panel.add(splitPane, BorderLayout.CENTER);
-
-        // ===== 選單列 =====
+        frame.getContentPane().add(panel, BorderLayout.CENTER);
         frame.setJMenuBar(createMenuBar());
+        frame.setSize(700, 600);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
 
-        // ===== 註冊按鈕監聽器 =====
+        // 註冊各個按鈕事件
         enterbutton.addActionListener(new EnterListener());
         displaybutton.addActionListener(new DisplayListener());
         queryByDateButton.addActionListener(new QueryByDateListener());
@@ -165,15 +223,78 @@ public class AccountGUI {
         searchByNoteButton.addActionListener(new SearchByNoteListener());
         statsButton.addActionListener(new StatsButtonListener());
 
-        // 加入主 panel
-        frame.getContentPane().add(panel);
-        frame.setSize(800, 600);  // 設定精確的初始大小
-        frame.setMinimumSize(new Dimension(800, 600));  // 設定最小尺寸
-        frame.setLocationRelativeTo(null); // 這行讓視窗顯示在螢幕中央
-        frame.setVisible(true);
-
-        // 顯示每日小語
+        // 顯示開始訊息
         showDailyQuote();
+    }
+
+    /**
+     * 創建表格式項目面板，將項目名稱和輸入欄位並排排列
+     * @param items 項目名稱數組
+     * @param title 面板標題
+     * @return 格式化好的項目面板
+     */
+    private JPanel createItemPanel(String[] items, String title) {
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createTitledBorder(title));
+        
+        // 創建一個網格面板來呈現項目和輸入欄位
+        JPanel gridPanel = new JPanel(new GridLayout(0, 2, 10, 15));
+        gridPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // 添加表頭
+        JLabel headerName = new JLabel("項目名稱", JLabel.CENTER);
+        JLabel headerAmount = new JLabel("金額", JLabel.CENTER);
+        
+        // 設定字體和樣式
+        Font headerFont = new Font("Microsoft JhengHei", Font.BOLD, 14);
+        headerName.setFont(headerFont);
+        headerAmount.setFont(headerFont);
+        
+        // 添加表頭分隔線效果
+        headerName.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.GRAY));
+        headerAmount.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.GRAY));
+        
+        gridPanel.add(headerName);
+        gridPanel.add(headerAmount);
+        
+        // 為每一個項目創建標籤和輸入欄位
+        Font itemFont = new Font("Microsoft JhengHei", Font.PLAIN, 14);
+        
+        for (String item : items) {
+            JLabel label = new JLabel(item + ":", JLabel.LEFT);
+            label.setFont(itemFont);
+            
+            JTextField field = new JTextField(10);
+            field.setFont(itemFont);
+            
+            // 將項目和對應的欄位存入 HashMap
+            amountFields.put(item, field);
+            
+            gridPanel.add(label);
+            gridPanel.add(field);
+        }
+        
+        // 創建一個面板來包裹網格面板，以便可以控制間距和佈局
+        JPanel wrapperPanel = new JPanel(new BorderLayout());
+        wrapperPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        wrapperPanel.add(gridPanel, BorderLayout.NORTH);
+        
+        // 將項目網格放入一個滾動窗格，以便有很多項目時可以滾動
+        JScrollPane scrollPane = new JScrollPane(wrapperPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setPreferredSize(new Dimension(300, 150));
+        
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        return mainPanel;
+    }
+    
+    // 清空所有輸入欄位
+    private void clearInputFields() {
+        for (JTextField field : amountFields.values()) {
+            field.setText("");
+        }
+        notefield.setText("");
     }
 
     // 建立選單列
@@ -268,33 +389,70 @@ public class AccountGUI {
                 }
             }
 
-            String[] labels = { "早餐", "午餐", "晚餐", "其他", "收入" };
-            JTextField[] fields = { breakfastfield, lunchfield, dinnerfield, othersfield, incomfield };
-            int[] values = new int[5];
+            // 取得使用者選擇的類型
+            int typeIndex = typeComboBox.getSelectedIndex(); // 0: 支出, 1: 收入
+            
+            // 創建用於保存收入和支出項目的映射表
+            Map<String, Integer> expenseItemsMap = new HashMap<>();
+            Map<String, Integer> incomeItemsMap = new HashMap<>();
+            
             boolean hasNonZero = false;
 
-            // 處理金額欄位
-            for (int i = 0; i < 5; i++) {
-                String text = fields[i].getText().trim();
-
-                if (text.isEmpty()) {
-                    values[i] = 0;  // 空值視為 0 元
+            // 根據所選類型處理相應欄位
+            if (typeIndex == 0) { // 支出
+                // 從 amountFields 中取得各項支出金額
+                for (String item : expenseItems) {
+                    JTextField field = amountFields.get(item);
+                    if (field == null) continue;
+                    
+                    String value = field.getText().trim();
+                    if (!value.isEmpty()) {
+                        try {
+                            int amount = Integer.parseInt(value);
+                            if (amount < 0) {
+                                errorMsg.append("❌ " + item + "金額不能為負數\n");
+                            } else if (amount > 0) {
+                                hasNonZero = true;
+                                expenseItemsMap.put(item, amount);
                 } else {
-                    try {
-                        values[i] = Integer.parseInt(text);
-                        if (values[i] < 0) {
-                            errorMsg.append("❌ " + labels[i] + "金額不能為負數\n");
-                        } else if (values[i] > 0) {
-                            hasNonZero = true; // 有有效金額
+                                expenseItemsMap.put(item, 0); // 將零金額也添加到映射中
+                            }
+                        } catch (NumberFormatException e) {
+                            errorMsg.append("❌ " + item + "金額格式錯誤（請輸入有效整數）\n");
+                        }
+                    } else {
+                        expenseItemsMap.put(item, 0); // 空白欄位設為 0
+                    }
+                }
+            } else { // 收入
+                // 從 amountFields 中取得各項收入金額
+                for (String item : incomeItems) {
+                    JTextField field = amountFields.get(item);
+                    if (field == null) continue;
+                    
+                    String value = field.getText().trim();
+                    if (!value.isEmpty()) {
+                        try {
+                            int amount = Integer.parseInt(value);
+                            if (amount < 0) {
+                                errorMsg.append("❌ " + item + "金額不能為負數\n");
+                            } else if (amount > 0) {
+                                hasNonZero = true;
+                                incomeItemsMap.put(item, amount);
+                            } else {
+                                incomeItemsMap.put(item, 0); // 將零金額也添加到映射中
                         }
                     } catch (NumberFormatException e) {
-                        errorMsg.append("❌ " + labels[i] + "金額格式錯誤（請輸入有效整數）\n");
+                            errorMsg.append("❌ " + item + "金額格式錯誤（請輸入有效整數）\n");
+                        }
+                    } else {
+                        incomeItemsMap.put(item, 0); // 空白欄位設為 0
                     }
                 }
             }
 
             if (!hasNonZero) {
-                errorMsg.append("❌ 至少要輸入一個不是 0 的有效金額（早餐、午餐、晚餐、其他、收入）\n");
+                errorMsg.append("❌ 至少要輸入一個大於0的金額\n");
             }
 
             // 備註欄位
@@ -309,13 +467,18 @@ public class AccountGUI {
                 return;
             }
 
-            // 所有金額欄位轉換
-            int breakfast = values[0];
-            int lunch = values[1];
-            int dinner = values[2];
-            int others = values[3];
-            int income = values[4];
-            int net = income - (breakfast + lunch + dinner + others);
+            // 計算支出和收入總額
+            int totalExpense = 0;
+            for (Integer value : expenseItemsMap.values()) {
+                totalExpense += value;
+            }
+            
+            int totalIncome = 0;
+            for (Integer value : incomeItemsMap.values()) {
+                totalIncome += value;
+            }
+            
+            int net = totalIncome - totalExpense;
 
             // 更新或新增帳目
             boolean accountExists = false;
@@ -325,14 +488,37 @@ public class AccountGUI {
 
                 // 如果日期相同，則更新該筆帳目
                 if (existingAccount.getDate().equals(date)) {
-                    existingAccount.setBreakfast(breakfast);
-                    existingAccount.setLunch(lunch);
-                    existingAccount.setDinner(dinner);
-                    existingAccount.setOthers(others);
-                    existingAccount.setIncome(income);
+                    // 更新所有項目的金額
+                    for (Map.Entry<String, Integer> entry : expenseItemsMap.entrySet()) {
+                        existingAccount.setExpenseItem(entry.getKey(), entry.getValue());
+                    }
+                    
+                    for (Map.Entry<String, Integer> entry : incomeItemsMap.entrySet()) {
+                        existingAccount.setIncomeItem(entry.getKey(), entry.getValue());
+                    }
+                    
                     existingAccount.setNet(net);
                     existingAccount.setNote(note);
-                    area.setText("✅ 帳目已更新！ 日期：" + date);
+                    
+                    StringBuilder updatedItems = new StringBuilder();
+                    
+                    // 添加支出項目到訊息
+                    for (Map.Entry<String, Integer> entry : expenseItemsMap.entrySet()) {
+                        if (entry.getValue() > 0) {
+                            updatedItems.append(entry.getKey()).append(": ")
+                                        .append(entry.getValue()).append("元 ");
+                        }
+                    }
+                    
+                    // 添加收入項目到訊息
+                    for (Map.Entry<String, Integer> entry : incomeItemsMap.entrySet()) {
+                        if (entry.getValue() > 0) {
+                            updatedItems.append(entry.getKey()).append(": ")
+                                        .append(entry.getValue()).append("元 ");
+                        }
+                    }
+                    
+                    area.setText("✅ 帳目已更新！ 日期：" + date + "\n" + updatedItems);
                     accountExists = true;
                     break;
                 }
@@ -340,19 +526,33 @@ public class AccountGUI {
 
             // 如果沒有找到相同日期的帳目，則新增一筆
             if (!accountExists) {
-                account = new Account(date, breakfast, lunch, dinner, others, income, net, note);
+                account = new Account(date, expenseItemsMap, incomeItemsMap, note);
                 accountList.add(account);
                 account = null;
-                area.setText("✅ 帳目建立成功！");
+                
+                StringBuilder updatedItems = new StringBuilder();
+                
+                // 添加支出項目到訊息
+                for (Map.Entry<String, Integer> entry : expenseItemsMap.entrySet()) {
+                    if (entry.getValue() > 0) {
+                        updatedItems.append(entry.getKey()).append(": ")
+                                    .append(entry.getValue()).append("元 ");
+                    }
+                }
+                
+                // 添加收入項目到訊息
+                for (Map.Entry<String, Integer> entry : incomeItemsMap.entrySet()) {
+                    if (entry.getValue() > 0) {
+                        updatedItems.append(entry.getKey()).append(": ")
+                                    .append(entry.getValue()).append("元 ");
+                    }
+                }
+                
+                area.setText("✅ 帳目建立成功！ 日期：" + date + "\n" + updatedItems);
             }
 
             // 清空欄位
-            breakfastfield.setText("");
-            lunchfield.setText("");
-            dinnerfield.setText("");
-            othersfield.setText("");
-            incomfield.setText("");
-            notefield.setText("");
+            clearInputFields();
         }
     }
 
@@ -603,54 +803,112 @@ public class AccountGUI {
                         // 轉成字串可用於查詢或顯示
                         String year = String.valueOf(selectedYear);
                         
-                        // 進行統計
-                        int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0, incomeTotal = 0;
+                        // 初始化統計資料
+                        Map<String, Integer> expenseTotals = new HashMap<>();
+                        Map<String, Integer> incomeTotals = new HashMap<>();
+                        
+                        // 初始化所有可能的項目類別，設定為0
+                        for (String item : expenseItems) {
+                            expenseTotals.put(item, 0);
+                        }
+                        
+                        for (String item : incomeItems) {
+                            incomeTotals.put(item, 0);
+                        }
+                        
+                        // 初始化月度資料
+                        double[][] monthlyExpenseByCategory = new double[expenseItems.length][12]; // [類別][月份]
+                        double[][] monthlyIncomeByCategory = new double[incomeItems.length][12];   // [類別][月份]
+                        double[] monthlyTotalExpense = new double[12];
+                        double[] monthlyTotalIncome = new double[12];
+                        
+                        int totalExpense = 0;
+                        int totalIncome = 0;
 
-                        double[] monthlyTotals = new double[12]; // 用來存每月支出總和
-                        double[] monthlyIncome = new double[12]; // 用來存每月收入總和
-
+                        // 遍歷所有帳目，統計年度數據
                         for (int i = 0; i < accountList.size(); i++) {
                             Account acc = accountList.get(i);
                             if (acc.getDate().startsWith(year)) {
-                                breakfastTotal += acc.getBreakfast();
-                                lunchTotal += acc.getLunch();
-                                dinnerTotal += acc.getDinner();
-                                othersTotal += acc.getOthers();
-                                total += acc.getTotal();
-                                incomeTotal += acc.getIncome();
-
-                                // 取月份（假設格式是 yyyy/MM/dd），畫圖用到的
-                                String[] parts = acc.getDate().split("/");
-                                if (parts.length >= 2) {
-                                    int monthIndex = Integer.parseInt(parts[1]) - 1;
+                                // 取得月份（假設格式是 yyyy/MM/dd）
+                                String[] dateParts = acc.getDate().split("/");
+                                int monthIndex = -1;
+                                if (dateParts.length >= 2) {
+                                    monthIndex = Integer.parseInt(dateParts[1]) - 1; // 0-based index
+                                }
+                                
+                                // 累加各支出項目金額
+                                Map<String, Integer> accountExpenses = acc.getExpenseItems();
+                                for (int categoryIndex = 0; categoryIndex < expenseItems.length; categoryIndex++) {
+                                    String category = expenseItems[categoryIndex];
+                                    int amount = accountExpenses.getOrDefault(category, 0);
+                                    
+                                    // 累加到總額
+                                    expenseTotals.put(category, expenseTotals.get(category) + amount);
+                                    totalExpense += amount;
+                                    
+                                    // 如果找到月份，也累加到月度資料
                                     if (monthIndex >= 0 && monthIndex < 12) {
-                                        monthlyTotals[monthIndex] += acc.getTotal();
-                                        monthlyIncome[monthIndex] += acc.getIncome();
+                                        monthlyExpenseByCategory[categoryIndex][monthIndex] += amount;
+                                        monthlyTotalExpense[monthIndex] += amount;
+                                    }
+                                }
+                                
+                                // 累加各收入項目金額
+                                Map<String, Integer> accountIncomes = acc.getIncomeItems();
+                                for (int categoryIndex = 0; categoryIndex < incomeItems.length; categoryIndex++) {
+                                    String category = incomeItems[categoryIndex];
+                                    int amount = accountIncomes.getOrDefault(category, 0);
+                                    
+                                    // 累加到總額
+                                    incomeTotals.put(category, incomeTotals.get(category) + amount);
+                                    totalIncome += amount;
+                                    
+                                    // 如果找到月份，也累加到月度資料
+                                    if (monthIndex >= 0 && monthIndex < 12) {
+                                        monthlyIncomeByCategory[categoryIndex][monthIndex] += amount;
+                                        monthlyTotalIncome[monthIndex] += amount;
                                     }
                                 }
                             }
                         }
 
-                        // 顯示統計結果
-                        String statsMessage = year + "年統計：\n"
-                                + "早餐總支出：" + breakfastTotal + " 元\n"
-                                + "午餐總支出：" + lunchTotal + " 元\n"
-                                + "晚餐總支出：" + dinnerTotal + " 元\n"
-                                + "其他總支出：" + othersTotal + " 元\n"
-                                + "全部總支出：" + total + " 元\n"
-                                + "額外總收入：" + incomeTotal + " 元\n"
-                                + "全部淨支出：" + (incomeTotal - total) + " 元\n";
-                                
-                        JOptionPane.showMessageDialog(statsFrame, statsMessage, "年統計結果", JOptionPane.INFORMATION_MESSAGE);
+                        // 建立詳細的統計結果文字
+                        StringBuilder statsMessage = new StringBuilder(year + "年統計：\n");
+                        
+                        // 添加各支出項目統計
+                        statsMessage.append("\n【支出項目統計】\n");
+                        for (String category : expenseItems) {
+                            int amount = expenseTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                statsMessage.append(category).append("總支出：").append(amount).append(" 元\n");
+                            }
+                        }
+                        statsMessage.append("全部總支出：").append(totalExpense).append(" 元\n");
+                        
+                        // 添加各收入項目統計
+                        statsMessage.append("\n【收入項目統計】\n");
+                        for (String category : incomeItems) {
+                            int amount = incomeTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                statsMessage.append(category).append("總收入：").append(amount).append(" 元\n");
+                            }
+                        }
+                        statsMessage.append("全部總收入：").append(totalIncome).append(" 元\n");
+                        
+                        // 添加淨收支統計
+                        statsMessage.append("\n【淨收支統計】\n");
+                        statsMessage.append("全年淨收入：").append(totalIncome - totalExpense).append(" 元\n");
+                        
+                        JOptionPane.showMessageDialog(statsFrame, statsMessage.toString(), "年統計結果", JOptionPane.INFORMATION_MESSAGE);
 
                         // === 建立「每月總支出」的圖表 ===
                         DefaultCategoryDataset monthlyDataset = new DefaultCategoryDataset();
-                        String monthlySeriesName = "每月支出";
                         String[] monthNames = { "1月", "2月", "3月", "4月", "5月", "6月", 
                                                 "7月", "8月", "9月", "10月", "11月", "12月" };
 
+                        // 將每個月的總支出數據添加到資料集
                         for (int i = 0; i < 12; i++) {
-                            monthlyDataset.addValue(monthlyTotals[i], monthlySeriesName, monthNames[i]);
+                            monthlyDataset.addValue(monthlyTotalExpense[i], "總支出", monthNames[i]);
                         }
 
                         JFreeChart monthlyChart = ChartFactory.createBarChart(
@@ -659,37 +917,40 @@ public class AccountGUI {
                             "金額（元）",
                             monthlyDataset,
                             PlotOrientation.VERTICAL,
-                            true,                    // 是否顯示圖例
-                            true,                    // 是否顯示 tooltip
-                            false                    // 是否啟用 URL 功能
+                            true,
+                            true,
+                            false
                         );
 
                         ChartPanel monthlyChartPanel = new ChartPanel(monthlyChart);
 
-                        // === 建立「餐別總支出」的圓餅圖 ===
+                        // === 建立「支出項目」的圓餅圖 ===
                         DefaultPieDataset pieDataset = new DefaultPieDataset();
 
-                        pieDataset.setValue("早餐", breakfastTotal);
-                        pieDataset.setValue("午餐", lunchTotal);
-                        pieDataset.setValue("晚餐", dinnerTotal);
-                        pieDataset.setValue("其他", othersTotal);
+                        // 將各項支出添加到圓餅圖資料集
+                        for (String category : expenseItems) {
+                            int amount = expenseTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                pieDataset.setValue(category, amount);
+                            }
+                        }
 
                         JFreeChart pieChart = ChartFactory.createPieChart(
-                            year + "年各類別總支出", // 圖表標題
-                            pieDataset,              // 資料集
-                            true,                    // 是否顯示圖例
-                            true,                    // 是否生成提示
-                            false                    // 是否生成URL連結
+                            year + "年各類別總支出",
+                            pieDataset,
+                            true,
+                            true,
+                            false
                         );
 
                         ChartPanel pieChartPanel = new ChartPanel(pieChart);
 
                         // === 建立「每月收入」長條圖 ===
                         DefaultCategoryDataset incomeDataset = new DefaultCategoryDataset();
-                        String incomeSeries = "每月收入";
 
+                        // 將每個月的總收入數據添加到資料集
                         for (int i = 0; i < 12; i++) {
-                            incomeDataset.addValue(monthlyIncome[i], incomeSeries, monthNames[i]);
+                            incomeDataset.addValue(monthlyTotalIncome[i], "總收入", monthNames[i]);
                         }
 
                         JFreeChart incomeChart = ChartFactory.createBarChart(
@@ -698,9 +959,9 @@ public class AccountGUI {
                             "金額（元）",
                             incomeDataset,
                             PlotOrientation.VERTICAL,
-                            true,                    // 是否顯示圖例
-                            true,                    // 是否顯示 tooltip
-                            false                    // 是否啟用 URL 功能
+                            true,
+                            true,
+                            false
                         );
 
                         // 設定長條顏色為藍色
@@ -710,51 +971,35 @@ public class AccountGUI {
 
                         ChartPanel incomeChartPanel = new ChartPanel(incomeChart);
 
-                        // === 建立「收入與支出」折線圖 ===
-                        DefaultCategoryDataset lineDataset = new DefaultCategoryDataset();
-                        String expenseLine = "支出";
-                        String incomeLine = "收入";
+                        // === 建立「收入項目」的圓餅圖 ===
+                        DefaultPieDataset incomePieDataset = new DefaultPieDataset();
 
-                        for (int i = 0; i < 12; i++) {
-                            lineDataset.addValue(monthlyTotals[i], expenseLine, monthNames[i]);
-                            lineDataset.addValue(monthlyIncome[i], incomeLine, monthNames[i]);
+                        // 將各項收入添加到圓餅圖資料集
+                        for (String category : incomeItems) {
+                            int amount = incomeTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                incomePieDataset.setValue(category, amount);
+                            }
                         }
 
-                        JFreeChart lineChart = ChartFactory.createLineChart(
-                            year + "年每月收入與支出比較",
-                            "月份",
-                            "金額（元）",
-                            lineDataset,
-                            PlotOrientation.VERTICAL,
-                            true,                    // 是否顯示圖例
-                            true,                    // 是否顯示 tooltip
-                            false                    // 是否啟用 URL 功能
+                        JFreeChart incomePieChart = ChartFactory.createPieChart(
+                            year + "年各類別總收入",
+                            incomePieDataset,
+                            true,
+                            true,
+                            false
                         );
 
-                        // 取得 plot，並設定 renderer 顯示圖形（資料點）
-                        CategoryPlot plot = lineChart.getCategoryPlot();
-                        LineAndShapeRenderer renderer = new LineAndShapeRenderer();
-
-                        // 讓兩條線都顯示圓點、填滿圓點、顯示提示訊息
-                        for (int i = 0; i < 2; i++) {
-                            renderer.setSeriesShapesVisible(i, true);  // 顯示資料點
-                            renderer.setSeriesShapesFilled(i, true);   // 填滿資料點
-                            renderer.setSeriesToolTipGenerator(i, new StandardCategoryToolTipGenerator());
-                        }
-
-                        // 將 renderer 套用到圖表
-                        plot.setRenderer(renderer);
-
-                        ChartPanel lineChartPanel = new ChartPanel(lineChart);
+                        ChartPanel incomePieChartPanel = new ChartPanel(incomePieChart);
 
                         // === 建立視窗，同時顯示四張圖表 ===
                         JPanel chartsPanel = new JPanel(new GridLayout(2, 2));
-                        chartsPanel.add(monthlyChartPanel);  // 每月支出長條圖
-                        chartsPanel.add(pieChartPanel);      // 餐別支出圓餅圖
-                        chartsPanel.add(incomeChartPanel);   // 每月收入長條圖
-                        chartsPanel.add(lineChartPanel);     // 收支折線圖
+                        chartsPanel.add(monthlyChartPanel);     // 每月支出長條圖
+                        chartsPanel.add(pieChartPanel);         // 支出項目圓餅圖
+                        chartsPanel.add(incomeChartPanel);      // 每月收入長條圖
+                        chartsPanel.add(incomePieChartPanel);   // 收入項目圓餅圖
 
-                        JFrame chartFrame = new JFrame(year + "年支出圖表");
+                        JFrame chartFrame = new JFrame(year + "年收支圖表");
                         chartFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                         chartFrame.add(chartsPanel);
                         chartFrame.setSize(1000, 800);
@@ -803,30 +1048,103 @@ public class AccountGUI {
 
                         int day = DateUtils.getDaysInYearMonth(month);
 
-                        int breakfastTotal = 0, lunchTotal = 0, dinnerTotal = 0, othersTotal = 0, total = 0, incomeTotal = 0;
-
+                        // 初始化統計資料
+                        Map<String, Integer> expenseTotals = new HashMap<>();
+                        Map<String, Integer> incomeTotals = new HashMap<>();
+                        
+                        // 初始化所有可能的項目類別，設定為0
+                        for (String item : expenseItems) {
+                            expenseTotals.put(item, 0);
+                        }
+                        
+                        for (String item : incomeItems) {
+                            incomeTotals.put(item, 0);
+                        }
+                        
+                        // 初始化日度支出和收入資料
+                        double[][] dailyExpenseByCategory = new double[expenseItems.length][31]; // [類別][日]
+                        double[][] dailyIncomeByCategory = new double[incomeItems.length][31];   // [類別][日]
+                        double[] dailyTotalExpense = new double[31];
+                        double[] dailyTotalIncome = new double[31];
+                        
+                        int totalExpense = 0;
+                        int totalIncome = 0;
+                        
+                        // 遍歷所有帳目，查找符合年月的資料
                         for (int i = 0; i < accountList.size(); i++) {
                             Account acc = accountList.get(i);
                             if (acc.getDate().startsWith(month)) {
-                                breakfastTotal += acc.getBreakfast();
-                                lunchTotal += acc.getLunch();
-                                dinnerTotal += acc.getDinner();
-                                othersTotal += acc.getOthers();
-                                total += acc.getTotal();
-                                incomeTotal += acc.getIncome();
+                                // 解析日期，取得日
+                                String[] dateParts = acc.getDate().split("/");
+                                int dayIndex = -1;
+                                if (dateParts.length >= 3) {
+                                    dayIndex = Integer.parseInt(dateParts[2]) - 1; // 0-based index
+                                }
+                                
+                                // 累加各支出項目金額
+                                Map<String, Integer> accountExpenses = acc.getExpenseItems();
+                                for (int categoryIndex = 0; categoryIndex < expenseItems.length; categoryIndex++) {
+                                    String category = expenseItems[categoryIndex];
+                                    int amount = accountExpenses.getOrDefault(category, 0);
+                                    
+                                    // 累加到總額
+                                    expenseTotals.put(category, expenseTotals.get(category) + amount);
+                                    totalExpense += amount;
+                                    
+                                    // 如果找到日，也累加到日度資料
+                                    if (dayIndex >= 0 && dayIndex < 31) {
+                                        dailyExpenseByCategory[categoryIndex][dayIndex] += amount;
+                                        dailyTotalExpense[dayIndex] += amount;
+                                    }
+                                }
+                                
+                                // 累加各收入項目金額
+                                Map<String, Integer> accountIncomes = acc.getIncomeItems();
+                                for (int categoryIndex = 0; categoryIndex < incomeItems.length; categoryIndex++) {
+                                    String category = incomeItems[categoryIndex];
+                                    int amount = accountIncomes.getOrDefault(category, 0);
+                                    
+                                    // 累加到總額
+                                    incomeTotals.put(category, incomeTotals.get(category) + amount);
+                                    totalIncome += amount;
+                                    
+                                    // 如果找到日，也累加到日度資料
+                                    if (dayIndex >= 0 && dayIndex < 31) {
+                                        dailyIncomeByCategory[categoryIndex][dayIndex] += amount;
+                                        dailyTotalIncome[dayIndex] += amount;
+                                    }
+                                }
                             }
                         }
 
-                        String statsMessage = month + " 統計：\n"
-                                + "早餐總支出：" + breakfastTotal + " 元\n"
-                                + "午餐總支出：" + lunchTotal + " 元\n"
-                                + "晚餐總支出：" + dinnerTotal + " 元\n"
-                                + "其他總支出：" + othersTotal + " 元\n"
-                                + "全部總支出：" + total + " 元\n"
-                                + "額外總收入：" + incomeTotal + " 元\n"
-                                + "全部淨支出：" + (incomeTotal - total) + " 元\n";
+                        // 建立詳細的統計結果文字
+                        StringBuilder statsMessage = new StringBuilder(month + " 統計：\n");
+                        
+                        // 添加各支出項目統計
+                        statsMessage.append("\n【支出項目統計】\n");
+                        for (String category : expenseItems) {
+                            int amount = expenseTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                statsMessage.append(category).append("總支出：").append(amount).append(" 元\n");
+                            }
+                        }
+                        statsMessage.append("全部總支出：").append(totalExpense).append(" 元\n");
+                        
+                        // 添加各收入項目統計
+                        statsMessage.append("\n【收入項目統計】\n");
+                        for (String category : incomeItems) {
+                            int amount = incomeTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                statsMessage.append(category).append("總收入：").append(amount).append(" 元\n");
+                            }
+                        }
+                        statsMessage.append("全部總收入：").append(totalIncome).append(" 元\n");
+                        
+                        // 添加淨收支統計
+                        statsMessage.append("\n【淨收支統計】\n");
+                        statsMessage.append("當月淨收入：").append(totalIncome - totalExpense).append(" 元\n");
 
-                        JOptionPane.showMessageDialog(statsFrame, statsMessage, "月統計結果", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(statsFrame, statsMessage.toString(), "月統計結果", JOptionPane.INFORMATION_MESSAGE);
 
                         // === 準備每日收入與支出的折線圖資料集 ===
                         DefaultCategoryDataset lineDataset = new DefaultCategoryDataset();
@@ -834,22 +1152,12 @@ public class AccountGUI {
                         String incomeLine = "每日收入";
 
                         for (int d = 1; d <= day; d++) {
-                            String dayStr = String.format("%02d", d); // 補零 01~31
-                            String targetDatePrefix = month + "/" + dayStr;
-                            int dailyTotal = 0;
-                            int dailyIncome = 0;
-
-                            for (int i = 0; i < accountList.size(); i++) {
-                                Account acc = accountList.get(i);
-                                if (acc.getDate().startsWith(targetDatePrefix)) {
-                                    dailyTotal += acc.getTotal();
-                                    dailyIncome += acc.getIncome();
-                                }
-                            }
-
-                            String xLabel = String.valueOf(d); // x軸標籤：1~31
-                            lineDataset.addValue(dailyTotal, expenseLine, xLabel);
-                            lineDataset.addValue(dailyIncome, incomeLine, xLabel);
+                            String dayStr = String.valueOf(d); // 天數標籤 1-31
+                            int dayIndex = d - 1; // 轉換為陣列索引
+                            
+                            // 添加每日總支出和總收入
+                            lineDataset.addValue(dailyTotalExpense[dayIndex], expenseLine, dayStr);
+                            lineDataset.addValue(dailyTotalIncome[dayIndex], incomeLine, dayStr);
                         }
 
                         JFreeChart lineChart = ChartFactory.createLineChart(
@@ -876,12 +1184,16 @@ public class AccountGUI {
 
                         ChartPanel lineChartPanel = new ChartPanel(lineChart);
 
-                        // === 準備餐別支出的圓餅圖資料集 ===
+                        // === 準備支出項目的圓餅圖資料集 ===
                         DefaultPieDataset pieDataset = new DefaultPieDataset();
-                        pieDataset.setValue("早餐", breakfastTotal);
-                        pieDataset.setValue("午餐", lunchTotal);
-                        pieDataset.setValue("晚餐", dinnerTotal);
-                        pieDataset.setValue("其他", othersTotal);
+                        
+                        // 將各項支出添加到圓餅圖資料集
+                        for (String category : expenseItems) {
+                            int amount = expenseTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                pieDataset.setValue(category, amount);
+                            }
+                        }
 
                         JFreeChart pieChart = ChartFactory.createPieChart(
                             month + " 各類別總支出",
@@ -893,15 +1205,42 @@ public class AccountGUI {
 
                         ChartPanel pieChartPanel = new ChartPanel(pieChart);
 
-                        // === 建立面板，顯示兩張圖 ===
-                        JPanel chartsPanel = new JPanel(new GridLayout(1, 2));
-                        chartsPanel.add(lineChartPanel);
-                        chartsPanel.add(pieChartPanel);
+                        // === 準備收入項目的圓餅圖資料集 ===
+                        DefaultPieDataset incomePieDataset = new DefaultPieDataset();
+                        
+                        // 將各項收入添加到圓餅圖資料集
+                        for (String category : incomeItems) {
+                            int amount = incomeTotals.getOrDefault(category, 0);
+                            if (amount > 0) {
+                                incomePieDataset.setValue(category, amount);
+                            }
+                        }
 
-                        JFrame chartFrame = new JFrame(month + " 支出圖表");
+                        JFreeChart incomePieChart = ChartFactory.createPieChart(
+                            month + " 各類別總收入",
+                            incomePieDataset,
+                            true,
+                            true,
+                            false
+                        );
+
+                        ChartPanel incomePieChartPanel = new ChartPanel(incomePieChart);
+
+                        // === 建立面板，顯示多張圖 ===
+                        JPanel chartsPanel = new JPanel(new GridLayout(2, 2));
+                        chartsPanel.add(lineChartPanel);        // 每日收支折線圖
+                        chartsPanel.add(pieChartPanel);         // 支出項目圓餅圖
+                        chartsPanel.add(incomePieChartPanel);   // 收入項目圓餅圖
+                        
+                        // 其餘空間保留或添加其他圖表
+                        JPanel infoPanel = new JPanel();
+                        infoPanel.add(new JLabel(month + " 月收支統計圖表"));
+                        chartsPanel.add(infoPanel);
+
+                        JFrame chartFrame = new JFrame(month + " 收支圖表");
                         chartFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
                         chartFrame.add(chartsPanel);
-                        chartFrame.setSize(1200, 500);
+                        chartFrame.setSize(1200, 800);
                         chartFrame.setLocationRelativeTo(statsFrame);
                         chartFrame.setVisible(true);
                     }
