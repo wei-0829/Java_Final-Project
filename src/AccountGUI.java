@@ -35,6 +35,9 @@ import com.toedter.calendar.JMonthChooser;
 import java.io.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+//引入設定風格套件
+import com.formdev.flatlaf.FlatLightLaf;
+
 public class AccountGUI {
     // GUI 元件與變數定義
     private AccountList accountList;   // 儲存帳目資料的容器
@@ -1322,6 +1325,26 @@ public class AccountGUI {
 
     // 主程式進入點
     public static void main(String[] args) {
+        try {
+             // 設定 FlatLaf 外觀
+            UIManager.setLookAndFeel(new FlatLightLaf());
+
+            // 設定中文字體
+            Font zhFont = new Font("Microsoft JhengHei", Font.PLAIN, 14);
+            UIManager.put("Label.font", zhFont);
+            UIManager.put("Button.font", zhFont);
+            UIManager.put("TextField.font", zhFont);
+            UIManager.put("TextArea.font", zhFont);
+            UIManager.put("Table.font", zhFont);
+
+            // （可選）自訂 FlatLaf 的一些配色，如果要更明顯的漸層效果可考慮寫自定義 UI
+            UIManager.put("Button.startBackground", new Color(255, 255, 255));
+            UIManager.put("Button.endBackground", new Color(192, 192, 192));
+            UIManager.put("Button.focusedBackground", new Color(220, 220, 220));
+        } catch (Exception ex) {
+            System.err.println("Failed to initialize LaF");
+        }
+
         AccountGUI gui = new AccountGUI();
         gui.buildGUI();
     }
