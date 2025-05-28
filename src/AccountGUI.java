@@ -417,7 +417,7 @@ public class AccountGUI {
                             } else if (amount > 0) {
                                 hasNonZero = true;
                                 expenseItemsMap.put(item, amount);
-                } else {
+                            } else {
                                 expenseItemsMap.put(item, 0); // 將零金額也添加到映射中
                             }
                         } catch (NumberFormatException e) {
@@ -444,8 +444,8 @@ public class AccountGUI {
                                 incomeItemsMap.put(item, amount);
                             } else {
                                 incomeItemsMap.put(item, 0); // 將零金額也添加到映射中
-                        }
-                    } catch (NumberFormatException e) {
+                            }
+                        } catch (NumberFormatException e) {
                             errorMsg.append("❌ " + item + "金額格式錯誤（請輸入有效整數）\n");
                         }
                     } else {
@@ -500,7 +500,6 @@ public class AccountGUI {
                         existingAccount.setIncomeItem(entry.getKey(), entry.getValue());
                     }
                     
-                    existingAccount.setNet(net);
                     existingAccount.setNote(note);
                     
                     StringBuilder updatedItems = new StringBuilder();
